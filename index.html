@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ORGAN AI – The Ultimate AI Tools Universe</title>
+  <meta name="description" content="ORGAN AI is the world's most complete AI tools hub. Discover, compare, and use every major AI — free and paid — in one stunning platform. Download for Windows & Mobile." />
+  <meta name="keywords" content="AI tools, ChatGPT, Claude, Gemini, Midjourney, free AI, paid AI, AI assistant, ORGAN AI" />
+  <meta name="author" content="ORGAN AI" />
+  <meta property="og:title" content="ORGAN AI – The Ultimate AI Tools Universe" />
+  <meta property="og:description" content="Compare every major AI tool — free and paid — all in one place. Powered by ORGAN AI." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://organii.netlify.app" />
+  <meta property="og:image" content="https://organii.netlify.app/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ORGAN AI – The Ultimate AI Tools Universe" />
+  <meta name="twitter:description" content="40+ AI tools. Free &amp; paid plans. One platform." />
+  <meta name="twitter:image" content="https://organii.netlify.app/og-image.png" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://organii.netlify.app" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Puter.js – free GPT-4o AI in the browser, no API key needed -->
+  <script src="https://js.puter.com/v2/"></script>
+  <!-- EmailJS SDK – sends welcome emails without a backend -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       CANVAS BACKGROUND (particles + grid)
+  ═══════════════════════════════════════════ -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- ═══════════════════════════════════════════
+       SCAN LINE OVERLAY
+  ═══════════════════════════════════════════ -->
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════════════════════
+       NAV
+  ═══════════════════════════════════════════ -->
+  <header class="nav" id="main-nav">
+    <div class="nav-inner">
+      <a href="#" class="logo" aria-label="ORGAN AI Home">
+        <span class="logo-mark">⬡</span>
+        <span class="logo-text">ORGAN<span class="logo-ai"> AI</span></span>
+      </a>
+
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="#tools-section" class="nav-link">AI Tools</a>
+        <a href="#assistant-section" class="nav-link">AI Assistant</a>
+        <a href="#games-section" class="nav-link">Games</a>
+      </nav>
+
+      <div class="nav-auth">
+        <!-- User avatar (hidden until logged in) -->
+        <div class="user-avatar hidden" id="user-avatar-btn" onclick="toggleUserMenu(event)">
+          <img id="user-photo" src="" alt="" class="user-photo-img" style="display:none">
+          <span id="user-initials"></span>
+          <div class="user-menu hidden" id="user-menu">
+            <div class="user-menu-name" id="user-menu-name"></div>
+            <div class="user-menu-email" id="user-menu-email"></div>
+            <button onclick="signOut()">🚪 Sign Out</button>
+          </div>
+        </div>
+        <!-- Login button (hidden after login) -->
+        <button class="btn-ghost" id="nav-signin-btn" onclick="openModal('signin-modal')" aria-label="Sign in">Sign In</button>
+      </div>
+
+      <button class="hamburger" id="hamburger-btn" aria-label="Toggle menu" onclick="toggleMobileNav()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+
+    <!-- Mobile nav -->
+    <div class="mobile-nav hidden" id="mobile-nav">
+      <a href="#tools-section" onclick="toggleMobileNav()">🔍 AI Tools</a>
+      <a href="#assistant-section" onclick="toggleMobileNav()">🤖 AI Assistant</a>
+      <a href="#games-section" onclick="toggleMobileNav()">🎮 Games</a>
+      <button onclick="openModal('signin-modal');toggleMobileNav()" style="color:var(--white-90);text-align:left;padding:0.5rem 0;border-bottom:1px solid var(--border)">🔐 Sign In / Sign Up</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════════ -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Live · <span id="hero-tool-count">40+</span> AI Tools Tracked
+      </div>
+
+      <h1 class="hero-title" id="hero-title">
+        <span class="title-line-1">THE AI</span>
+        <span class="title-line-2 neon-text">UNIVERSE</span>
+        <span class="title-line-3">STARTS HERE</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        Explore, compare, and access every major AI tool — free &amp; paid —<br class="hide-mobile"/>
+        all in one hyper-intelligent platform powered by <strong>ORGAN AI</strong>.
+      </p>
+
+      <div class="hero-ctas">
+        <button class="btn-neon btn-lg" onclick="document.getElementById('tools-section').scrollIntoView({behavior:'smooth'})">
+          Explore All AI Tools
+          <span class="btn-arrow">→</span>
+        </button>
+        <button class="btn-ghost btn-lg" onclick="openModal('signup-modal')">
+          Join for Free
+        </button>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num" data-target="40">0</span>+<div class="stat-lbl">AI Tools</div></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num" data-target="8">0</span><div class="stat-lbl">Categories</div></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num" data-target="100">0</span>%<div class="stat-lbl">Free to Browse</div></div>
+      </div>
+
+      <!-- 3D floating cards preview -->
+      <div class="hero-cards-3d" aria-hidden="true">
+        <div class="float-card fc-1">🤖 ChatGPT</div>
+        <div class="float-card fc-2">✨ Claude</div>
+        <div class="float-card fc-3">🎨 Midjourney</div>
+        <div class="float-card fc-4">💫 Gemini</div>
+        <div class="float-card fc-5">⚡ Grok</div>
+        <div class="float-card fc-6">🎵 Suno</div>
+      </div>
+    </div>
+
+    <div class="hero-scroll-hint" aria-hidden="true">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       AI ASSISTANT SECTION
+  ═══════════════════════════════════════════ -->
+  <section class="section assistant-section" id="assistant-section" aria-labelledby="assistant-title">
+    <div class="section-inner">
+      <div class="section-label">ORGAN AI ASSISTANT</div>
+      <h2 class="section-title" id="assistant-title">Your Personal <span class="neon-text">AI Guide</span></h2>
+      <p class="section-subtitle">Ask anything about AI tools, pricing, comparisons, and recommendations. Powered by ORGAN AI.</p>
+
+      <div class="assistant-shell" role="region" aria-label="AI Assistant Chat">
+        <div class="assistant-header">
+          <div class="assistant-avatar">⬡</div>
+          <div>
+            <div class="assistant-name">ORGAN Assistant</div>
+            <div class="assistant-status"><span class="status-dot"></span>Online &amp; Ready</div>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages" aria-live="polite">
+          <div class="msg msg-ai">
+            <div class="msg-avatar">⬡</div>
+            <div class="msg-bubble">
+              Hello! I'm your <strong>ORGAN AI Assistant</strong>. Ask me anything about AI tools — pricing, comparisons, which AI is best for coding, art, music, and more! 🚀
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-suggestions">
+          <button class="suggestion-chip" onclick="sendSuggestion(this)">Best free AI for coding?</button>
+          <button class="suggestion-chip" onclick="sendSuggestion(this)">ChatGPT vs Claude?</button>
+          <button class="suggestion-chip" onclick="sendSuggestion(this)">Cheapest image AI?</button>
+          <button class="suggestion-chip" onclick="sendSuggestion(this)">Free music AI tools?</button>
+        </div>
+
+        <form class="chat-input-row" id="chat-form" onsubmit="sendMessage(event)" aria-label="Chat input">
+          <input
+            type="text"
+            id="chat-input"
+            class="chat-input"
+            placeholder="Ask about any AI tool…"
+            autocomplete="off"
+            aria-label="Ask ORGAN AI Assistant"
+          />
+          <button type="submit" class="chat-send-btn" id="chat-send-btn" aria-label="Send message">
+            <span id="send-icon">➤</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       TOOLS DIRECTORY SECTION
+  ═══════════════════════════════════════════ -->
+  <section class="section tools-section" id="tools-section" aria-labelledby="tools-title">
+    <div class="section-inner">
+      <div class="section-label">COMPLETE DIRECTORY</div>
+      <h2 class="section-title" id="tools-title">Every AI Tool, <span class="neon-text">One View</span></h2>
+      <p class="section-subtitle">Free &amp; paid plans · Filter by category · Compare side by side</p>
+
+      <!-- Search -->
+      <div class="search-wrapper" role="search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" id="search-input" class="search-input" placeholder="Search 40+ AI tools…" aria-label="Search AI tools" autocomplete="off" />
+        <span class="search-count" id="search-count"></span>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar" role="tablist" aria-label="Filter by category">
+        <button class="filter-pill active" data-filter="all"        role="tab" aria-selected="true">All</button>
+        <button class="filter-pill"        data-filter="text"       role="tab" aria-selected="false">✍ Text &amp; Chat</button>
+        <button class="filter-pill"        data-filter="image"      role="tab" aria-selected="false">🎨 Image</button>
+        <button class="filter-pill"        data-filter="code"       role="tab" aria-selected="false">💻 Coding</button>
+        <button class="filter-pill"        data-filter="audio"      role="tab" aria-selected="false">🎵 Audio</button>
+        <button class="filter-pill"        data-filter="video"      role="tab" aria-selected="false">🎬 Video</button>
+        <button class="filter-pill"        data-filter="search"     role="tab" aria-selected="false">🔎 AI Search</button>
+        <button class="filter-pill"        data-filter="business"   role="tab" aria-selected="false">💼 Business</button>
+        <button class="filter-pill"        data-filter="multimodal" role="tab" aria-selected="false">🌐 Multimodal</button>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <p class="results-label" id="results-label" aria-live="polite"></p>
+        <div class="sort-group">
+          <label for="sort-select" class="sort-label">Sort:</label>
+          <select id="sort-select" class="sort-select" aria-label="Sort tools">
+            <option value="name">A–Z</option>
+            <option value="name-desc">Z–A</option>
+            <option value="category">Category</option>
+            <option value="free-first">Free First</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Grid -->
+      <main class="tool-grid" id="tools-grid" aria-label="AI tools directory"></main>
+      <div class="no-results hidden" id="no-results" aria-live="polite">
+        <div class="no-results-icon">🤖</div>
+        <h3>No tools found</h3>
+        <p>Try a different search or category.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════
+       FREE ONLINE GAMES
+  ═══════════════════════════════════════════ -->
+  <section class="section games-section" id="games-section" aria-labelledby="games-title">
+    <div class="section-inner">
+      <div class="section-label">FREE BROWSER GAMES</div>
+      <h2 class="section-title" id="games-title">Play Free Online <span class="neon-text">Games</span></h2>
+      <p class="section-subtitle">Discover and play thousands of free browser games instantly.</p>
+
+      <!-- Search -->
+      <div class="search-wrapper" role="search">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="search" id="games-search-input" class="search-input" placeholder="Search free games…" aria-label="Search games" autocomplete="off" />
+        <span class="search-count" id="games-search-count"></span>
+      </div>
+
+      <!-- Category Filters -->
+      <div class="filter-bar" role="tablist" aria-label="Filter games by category">
+        <button class="filter-pill active" data-game-filter="all"          role="tab" aria-selected="true">All</button>
+        <button class="filter-pill"        data-game-filter="action"       role="tab" aria-selected="false">💥 Action</button>
+        <button class="filter-pill"        data-game-filter="racing"       role="tab" aria-selected="false">🏎️ Racing</button>
+        <button class="filter-pill"        data-game-filter="puzzle"       role="tab" aria-selected="false">🧩 Puzzle</button>
+        <button class="filter-pill"        data-game-filter="adventure"    role="tab" aria-selected="false">🗺️ Adventure</button>
+        <button class="filter-pill"        data-game-filter="multiplayer"  role="tab" aria-selected="false">👥 Multiplayer</button>
+        <button class="filter-pill"        data-game-filter="strategy"     role="tab" aria-selected="false">♟️ Strategy</button>
+        <button class="filter-pill"        data-game-filter="sports"       role="tab" aria-selected="false">⚽ Sports</button>
+        <button class="filter-pill"        data-game-filter="arcade"       role="tab" aria-selected="false">👾 Arcade</button>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="games-toolbar">
+        <p class="results-label" id="games-results-label" aria-live="polite"></p>
+        <button class="games-fav-toggle" id="fav-toggle-btn" onclick="toggleFavoritesView()">
+          <span id="fav-toggle-icon">♡</span> My Favorites
+        </button>
+      </div>
+
+      <!-- Recently Played -->
+      <div id="recently-played-section" class="games-sub-section hidden">
+        <h3 class="games-sub-title">🕐 Recently Played</h3>
+        <div class="games-scroll-row" id="recently-played-row"></div>
+      </div>
+
+      <!-- Featured Games -->
+      <div id="featured-section" class="games-sub-section">
+        <h3 class="games-sub-title">⭐ Featured Games</h3>
+        <div class="featured-games-row" id="featured-games-row"></div>
+      </div>
+
+      <!-- Trending Games -->
+      <div id="trending-section" class="games-sub-section">
+        <h3 class="games-sub-title">🔥 Trending Now</h3>
+        <div class="games-grid" id="trending-games-grid" aria-label="Trending games"></div>
+      </div>
+
+      <!-- New Games -->
+      <div id="new-section" class="games-sub-section">
+        <h3 class="games-sub-title">🆕 New Games</h3>
+        <div class="games-grid" id="new-games-grid" aria-label="New games"></div>
+      </div>
+
+      <!-- All Games (search/filter results) -->
+      <div id="all-games-section" class="games-sub-section hidden">
+        <h3 class="games-sub-title" id="all-games-title">All Games</h3>
+        <div class="games-grid" id="all-games-grid" aria-label="All games"></div>
+      </div>
+
+      <!-- Favorites -->
+      <div id="favorites-section" class="games-sub-section hidden">
+        <h3 class="games-sub-title">❤️ My Favorite Games</h3>
+        <div class="games-grid" id="favorites-grid" aria-label="Favorite games"></div>
+        <div class="no-results hidden" id="games-no-favorites">
+          <div class="no-results-icon">💔</div>
+          <h3>No favorites yet</h3>
+          <p>Click the heart on any game to save it here.</p>
+        </div>
+      </div>
+
+      <div class="no-results hidden" id="games-no-results" aria-live="polite">
+        <div class="no-results-icon">🎮</div>
+        <h3>No games found</h3>
+        <p>Try a different search or category.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════ -->
+
+
+  <!-- ═══════════════════════════════════════════
+       BLOG SECTION
+  ═══════════════════════════════════════════ -->
+  <section class="section blog-section" id="blog-section" aria-labelledby="blog-title">
+    <div class="section-inner">
+      <div class="section-label">LATEST UPDATES</div>
+      <h2 class="section-title" id="blog-title">ORGAN AI <span class="neon-text">Insights</span></h2>
+      <p class="section-subtitle">Guides, tutorials, and research articles on artificial intelligence and browser gaming.</p>
+
+      <div class="blog-grid">
+        <!-- Post 1 -->
+        <article class="blog-card" onclick="openBlogPost('rise-of-agents')">
+          <div class="blog-card-thumb bct-1">
+            <span class="blog-emoji">🤖</span>
+          </div>
+          <div class="blog-card-content">
+            <div class="blog-meta">
+              <span class="blog-tag tag-tech">AI &amp; Tech</span>
+              <span class="blog-read-time">5 min read</span>
+            </div>
+            <h3 class="blog-card-title">The Rise of Agentic AI: Beyond Simple Chatbots</h3>
+            <p class="blog-card-excerpt">Explore how the next generation of AI agents are moving from text response models to autonomous goal-oriented execution systems...</p>
+            <div class="blog-card-footer">
+              <div class="blog-author">
+                <span class="author-avatar">👨‍💻</span>
+                <span class="author-name">Dr. Caleb Vance</span>
+              </div>
+              <span class="blog-date">June 26, 2026</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Post 2 -->
+        <article class="blog-card" onclick="openBlogPost('glassmorphism')">
+          <div class="blog-card-thumb bct-2">
+            <span class="blog-emoji">🎨</span>
+          </div>
+          <div class="blog-card-content">
+            <div class="blog-meta">
+              <span class="blog-tag tag-design">UI/UX Design</span>
+              <span class="blog-read-time">4 min read</span>
+            </div>
+            <h3 class="blog-card-title">Designing 3D Glassmorphic Interfaces for Web3 &amp; AI</h3>
+            <p class="blog-card-excerpt">A deep-dive tutorial into building premium, high-tech glassmorphism effects using CSS variables, blend modes, and mouse-tilt tracking...</p>
+            <div class="blog-card-footer">
+              <div class="blog-author">
+                <span class="author-avatar">👩‍🎨</span>
+                <span class="author-name">Elena Rostova</span>
+              </div>
+              <span class="blog-date">June 24, 2026</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Post 3 -->
+        <article class="blog-card" onclick="openBlogPost('html5-gaming')">
+          <div class="blog-card-thumb bct-3">
+            <span class="blog-emoji">🎮</span>
+          </div>
+          <div class="blog-card-content">
+            <div class="blog-meta">
+              <span class="blog-tag tag-gaming">Game Dev</span>
+              <span class="blog-read-time">6 min read</span>
+            </div>
+            <h3 class="blog-card-title">HTML5 Game Development in 2026: Canvas vs WebGL</h3>
+            <p class="blog-card-excerpt">Analyzing performance tradeoffs, browser security limits, and embedding support in modern game engines like Phaser and Three.js...</p>
+            <div class="blog-card-footer">
+              <div class="blog-author">
+                <span class="author-avatar">👨‍🚀</span>
+                <span class="author-name">Leo Martinez</span>
+              </div>
+              <span class="blog-date">June 21, 2026</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <span class="logo-mark">⬡</span> ORGAN<span class="logo-ai"> AI</span>
+      </div>
+      <p class="footer-tagline">The Universe of AI — All in One Place.</p>
+      <div class="footer-links">
+        <a href="javascript:void(0)" onclick="openModal('privacy-modal')">Privacy Policy</a>
+        <a href="javascript:void(0)" onclick="openModal('terms-modal')">Terms of Service</a>
+
+        <a href="#blog-section">Blog</a>
+      </div>
+      <p class="footer-copy">© <span id="footer-year"></span> ORGAN AI · All rights reserved.</p>
+      <p class="footer-disclaimer">Tool pricing and features are approximate. Always verify on the official tool website.</p>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════
+       SIGN IN MODAL
+  ═══════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="signin-modal" role="dialog" aria-modal="true" aria-labelledby="signin-title" onclick="closeModalIfBg(event,'signin-modal')">
+    <div class="modal auth-modal">
+      <button class="modal-close" onclick="closeModal('signin-modal')" aria-label="Close">✕</button>
+      <div class="auth-logo">⬡</div>
+      <h2 class="modal-title" id="signin-title">Welcome Back</h2>
+      <p class="modal-sub">Sign in to your ORGAN AI account</p>
+      <form class="auth-form" onsubmit="handleSignIn(event)">
+        <div class="form-group">
+          <label for="si-email">Email</label>
+          <input type="email" id="si-email" placeholder="you@email.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="si-pass">Password</label>
+          <input type="password" id="si-pass" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <div class="form-options">
+          <label class="checkbox-label"><input type="checkbox" /> Remember me</label>
+          <a href="#" class="forgot-link">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn-neon btn-full">Sign In →</button>
+      </form>
+      <div class="auth-divider"><span>or continue with</span></div>
+      <div class="social-btns">
+        <button class="social-btn google-btn" id="si-google-btn" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:8px;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+        <button class="social-btn github-btn" id="si-github-btn" onclick="signInWithGitHub()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white" style="margin-right:8px;flex-shrink:0"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+          Continue with GitHub
+        </button>
+      </div>
+      <p class="auth-switch">Don't have an account? <button onclick="switchModal('signin-modal','signup-modal')">Create one</button></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SIGN UP MODAL
+  ═══════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="signup-modal" role="dialog" aria-modal="true" aria-labelledby="signup-title" onclick="closeModalIfBg(event,'signup-modal')">
+    <div class="modal auth-modal">
+      <button class="modal-close" onclick="closeModal('signup-modal')" aria-label="Close">✕</button>
+      <div class="auth-logo">⬡</div>
+      <h2 class="modal-title" id="signup-title">Join ORGAN AI</h2>
+      <p class="modal-sub">Create your free account — no credit card required</p>
+      <form class="auth-form" onsubmit="handleSignUp(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="su-fname">First Name</label>
+            <input type="text" id="su-fname" placeholder="John" required autocomplete="given-name" />
+          </div>
+          <div class="form-group">
+            <label for="su-lname">Last Name</label>
+            <input type="text" id="su-lname" placeholder="Doe" required autocomplete="family-name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="su-email">Email</label>
+          <input type="email" id="su-email" placeholder="you@email.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="su-pass">Password</label>
+          <input type="password" id="su-pass" placeholder="Min. 8 characters" required autocomplete="new-password" minlength="8" />
+        </div>
+        <label class="checkbox-label terms-label">
+          <input type="checkbox" required id="su-terms" />
+          I agree to the <a href="javascript:void(0)" onclick="openModal('terms-modal')">Terms of Service</a> &amp; <a href="javascript:void(0)" onclick="openModal('privacy-modal')">Privacy Policy</a>
+        </label>
+        <button type="submit" class="btn-neon btn-full">Create Account →</button>
+      </form>
+      <div class="auth-divider"><span>or sign up with</span></div>
+      <div class="social-btns">
+        <button class="social-btn google-btn" id="su-google-btn" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:8px;flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+        <button class="social-btn github-btn" id="su-github-btn" onclick="signInWithGitHub()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white" style="margin-right:8px;flex-shrink:0"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+          Continue with GitHub
+        </button>
+      </div>
+      <p class="auth-switch">Already have an account? <button onclick="switchModal('signup-modal','signin-modal')">Sign in</button></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TOOL DETAIL MODAL
+  ═══════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="tool-modal" role="dialog" aria-modal="true" aria-labelledby="tool-modal-title" onclick="closeModalIfBg(event,'tool-modal')">
+    <div class="modal tool-modal">
+      <button class="modal-close" onclick="closeModal('tool-modal')" aria-label="Close">✕</button>
+      <div class="tool-modal-header">
+        <div class="tool-modal-logo" id="tool-modal-logo"></div>
+        <div>
+          <h2 class="modal-title" id="tool-modal-title"></h2>
+          <p class="modal-sub" id="tool-modal-sub"></p>
+        </div>
+      </div>
+      <div id="tool-modal-body"></div>
+      <div id="tool-modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       GAME PLAYER MODAL
+  ═══════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="game-player-modal" role="dialog" aria-modal="true" aria-labelledby="game-player-title">
+    <div class="game-player-container">
+      <div class="game-player-header">
+        <div class="game-player-info">
+          <span class="game-player-emoji" id="game-player-emoji"></span>
+          <div>
+            <h2 id="game-player-title" class="game-player-name"></h2>
+            <span id="game-player-category" class="game-player-cat"></span>
+          </div>
+        </div>
+        <div class="game-player-controls">
+          <button onclick="toggleGameFullscreen()" class="gp-control-btn" aria-label="Fullscreen" title="Fullscreen">⛶</button>
+          <button onclick="closeGamePlayer()" class="gp-control-btn gp-close-btn" aria-label="Close">✕</button>
+        </div>
+      </div>
+      <div class="game-player-frame-wrap" id="game-frame-wrap">
+        <iframe id="game-iframe" class="game-iframe" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
+        <div class="game-loading" id="game-loading">
+          <div class="game-loading-spinner"></div>
+          <p>Loading game…</p>
+        </div>
+      </div>
+      <div class="game-player-footer">
+        <div class="game-rating-area">
+          <span class="rating-label">Rate this game:</span>
+          <div class="star-rating" id="game-player-rating"></div>
+        </div>
+        <div class="game-player-actions">
+          <button class="gp-action-btn" id="gp-fav-btn" onclick="toggleFavoriteFromPlayer()">
+            <span id="gp-fav-icon">♡</span> Favorite
+          </button>
+          <a href="#" target="_blank" rel="noopener noreferrer" class="gp-action-btn" id="gp-site-link">🔗 Visit Site</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       PRIVACY POLICY MODAL
+  ═══════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="privacy-modal" role="dialog" aria-modal="true" aria-labelledby="privacy-title" onclick="closeModalIfBg(event,'privacy-modal')">
+    <div class="modal legal-modal">
+      <button class="modal-close" onclick="closeModal('privacy-modal')" aria-label="Close">✕</button>
+      <div class="legal-header">
+        <span class="legal-icon">🛡️</span>
+        <div>
+          <h2 class="modal-title" id="privacy-title">Privacy Policy</h2>
+          <p class="modal-sub">Last Updated: June 26, 2026</p>
+        </div>
+      </div>
+      <div class="legal-body">
+        <h3>1. Information We Collect</h3>
+        <p>At ORGAN AI, we prioritize developer privacy and user transparency. We collect basic sign-up credentials (first name, last name, email) during account creation and local interactions within the system.</p>
+        
+        <h3>2. LocalStorage Caching</h3>
+        <p>We utilize the browser's <code>localStorage</code> cache to persist your interactions, such as favorited games (<code>organ_game_favs</code>), recently played logs (<code>organ_recent_games</code>), and ratings feedback (<code>organ_game_ratings</code>). This information is kept entirely client-side on your device and is not synchronized to external servers unless explicit integration is selected.</p>
+
+        <h3>3. Third-Party Integrations &amp; Embeds</h3>
+        <p>Our platform includes iframe elements displaying browser-playable games hosted on third-party servers (e.g., itch.io, GitHub Pages, or Miniclip). These external sites may drop cookies, gather telemetry, or track user interaction according to their own privacy rules. We recommend reviewing their legal terms before playing.</p>
+
+        <h3>4. Email Notifications</h3>
+        <p>If you create an account, we use third-party APIs (like EmailJS) to send welcome notifications and validation links. We do not sell or distribute your email addresses to advertiser networks.</p>
+
+        <h3>5. Consent and Data Practices</h3>
+        <p>By utilizing the tools and services offered by ORGAN AI, you consent to our practices of data collection, sandboxed script embedding, and local caching protocols. If you do not agree with these practices, please clear your browser local storage cache and terminate further communication with our endpoints.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TERMS OF SERVICE MODAL
+  ═══════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="terms-modal" role="dialog" aria-modal="true" aria-labelledby="terms-title" onclick="closeModalIfBg(event,'terms-modal')">
+    <div class="modal legal-modal">
+      <button class="modal-close" onclick="closeModal('terms-modal')" aria-label="Close">✕</button>
+      <div class="legal-header">
+        <span class="legal-icon">⚖️</span>
+        <div>
+          <h2 class="modal-title" id="terms-title">Terms of Service</h2>
+          <p class="modal-sub">Last Updated: June 26, 2026</p>
+        </div>
+      </div>
+      <div class="legal-body">
+        <h3>1. Acceptance of Terms</h3>
+        <p>By accessing, registering, browsing, or interacting with ORGAN AI, you signify your irrevocable agreement to be bound by these Terms of Service and all guidelines, rules, and privacy policies published herein. If you do not accept these terms in their entirety, you must immediately cease all access and utilization of our portal and associated services.</p>
+
+        <h3>2. User Accounts, Eligibility &amp; Security</h3>
+        <p>To access certain customized features, tool rating pipelines, or developer portals, you may be required to establish an account via our passwordless email-based authentication system. You are entirely responsible for maintaining the confidentiality of your active session tokens. You agree to notify ORGAN AI immediately of any unauthorized access or security breaches. ORGAN AI will not be held liable for any loss or damage arising from your failure to safeguard your account parameters.</p>
+
+        <h3>3. Acceptable Use Policy &amp; System Integrity</h3>
+        <p>You are granted a non-exclusive, non-transferable, revocable license to access the portal strictly in accordance with these terms. You agree that you will not:
+          <ul>
+            <li>Engage in any automated scraping, data mining, harvesting, or bulk extraction of tool directories, game configurations, or user analytics without explicit written consent.</li>
+            <li>Use any robot, spider, bot, or other automated agent to query our assistant or API endpoints.</li>
+            <li>Inject malicious scripts, exploit vulnerabilities, execute denial-of-service (DoS) attacks, or disrupt the network connectivity of the portal or third-party game endpoints.</li>
+            <li>Circumvent or attempt to bypass any rate-limiting, regional controls, or network sandboxing configurations.</li>
+          </ul>
+        </p>
+
+        <h3>4. Developer API &amp; Dev Token Conditions</h3>
+        <p>We provide programmatic read access to our tools index and gaming assets through our Developer API. By generating an <code>org_live_</code> authorization token, you agree to the following strict conditions:
+          <ul>
+            <li><strong>Rate Limits</strong>: API requests are limited to 60 transactions per minute. Excessive requests will trigger a <code>429 Too Many Requests</code> HTTP response and may lead to temporary or permanent token revocation.</li>
+            <li><strong>Security and Caching</strong>: You must never hardcode API keys in front-end client bundles or public repositories. You are highly encouraged to cache API responses locally to prevent redundant server round-trips.</li>
+            <li><strong>Syndication</strong>: Commercial syndication, sub-licensing, or direct reselling of the ORGAN AI database is strictly prohibited unless authorized under a custom enterprise agreement.</li>
+          </ul>
+        </p>
+
+        <h3>5. Interactive Game Portal &amp; Embedding</h3>
+        <p>The Free Online Games section embeds public browser-playable HTML5 gaming payloads via sandboxed iframes. ORGAN AI does not host, compile, or own the core binary files for these third-party titles (except where explicitly noted). You acknowledge that interacting with these embeds runs foreign scripts on your local browser under the respective host's guidelines. We are not responsible for gameplay errors, external pop-ups, browser crashes, or hardware damage resulting from playing embedded browser games.</p>
+
+        <h3>6. Intellectual Property &amp; Brand Rights</h3>
+        <p>All proprietary code, custom graphic assets, brand typography, structural layouts, and CSS files compiled in this repository are the exclusive intellectual property of ORGAN AI. All third-party tool names, product logos, trade marks, and game characters displayed in our catalogs are the sole property of their respective creators and owners. Displaying these items does not constitute an endorsement, sponsorship, or licensing agreement by or with ORGAN AI.</p>
+
+        <h3>7. User Content License &amp; Feedback</h3>
+        <p>When you submit feedback, bookmarks, ratings, or critiques within our assistant or directory portal, you grant ORGAN AI a non-exclusive, royalty-free, worldwide, perpetual, and sub-licensable license to record, process, display, synthesize, and adapt these metrics for the refinement of our directories, ranking algorithms, and editorial blog reviews.</p>
+
+        <h3>8. Service Modifications &amp; System Downtime</h3>
+        <p>ORGAN AI reserves the right to modify, suspend, or terminate the portal, the developer API, or any individual tool index/game embed at any time, for any reason, and without prior notification. You agree that ORGAN AI is not liable to you or any third party for any suspension, modification, or discontinuance of services.</p>
+
+        <h3>9. Disclaimer of Warranties</h3>
+        <p>THE SERVICES AND CONTENT ARE PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESSED OR IMPLIED. ORGAN AI SPECIFICALLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, ACCURATE, OR ERROR-FREE.</p>
+
+        <h3>10. Limitation of Liability</h3>
+        <p>IN NO EVENT SHALL ORGAN AI, ITS FOUNDERS, CONTRIBUTORS, OR AFFILIATED PARTNERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR IN CONNECTION WITH YOUR ACCESS TO OR USE OF THE SERVICE, REGARDLESS OF THE LEGAL THEORY CONCERNED.</p>
+
+        <h3>11. Indemnification</h3>
+        <p>You agree to defend, indemnify, and hold harmless ORGAN AI and its licensors from and against any claims, damages, obligations, losses, liabilities, costs, or debt (including attorney fees) resulting from or arising out of your utilization of the portal, your violation of these Terms of Service, or any activity related to your generated developer API keys.</p>
+
+        <h3>12. Governing Law &amp; Jurisdiction</h3>
+        <p>These Terms of Service and any operating rules shall be governed by and construed in accordance with the laws of the jurisdiction of operations, without regard to conflict of law rules. Any legal dispute or proceeding arising under these terms shall be subject to the exclusive venue of the competent courts in said jurisdiction.</p>
+
+        <h3>13. Entire Agreement</h3>
+        <p>These Terms of Service constitute the entire agreement between you and ORGAN AI regarding the portal. If any provision of these terms is deemed invalid or unenforceable by a court of competent jurisdiction, the remaining provisions of these terms will remain in full force and effect.</p>
+
+        <h3>14. Amendments to Conditions</h3>
+        <p>We reserve the right to revise or update these Terms of Service at any time. When modifications are made, we will update the "Last Updated" timestamp at the top of the modal. Continued interaction with the site following these updates constitutes binding acceptance of the revised conditions.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       BLOG POST READER MODAL
+  ═══════════════════════════════════════════ -->
+  <div class="modal-overlay hidden" id="blog-modal" role="dialog" aria-modal="true" aria-labelledby="blog-modal-title" onclick="closeModalIfBg(event,'blog-modal')">
+    <div class="modal blog-reader-modal">
+      <button class="modal-close" onclick="closeModal('blog-modal')" aria-label="Close">✕</button>
+      <div class="blog-reader-header">
+        <div class="blog-reader-meta">
+          <span class="blog-tag" id="blog-modal-tag"></span>
+          <span class="blog-read-time" id="blog-modal-time"></span>
+        </div>
+        <h2 class="modal-title" id="blog-modal-title"></h2>
+        <div class="blog-modal-author-row">
+          <span id="blog-modal-author-avatar" style="font-size:1.5rem"></span>
+          <div>
+            <div id="blog-modal-author-name" class="blog-author-name"></div>
+            <div id="blog-modal-date" class="blog-author-date"></div>
+          </div>
+        </div>
+      </div>
+      <div class="blog-reader-body" id="blog-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast hidden" id="download-toast" role="status" aria-live="polite">
+    <span id="toast-icon">🚀</span>
+    <span id="toast-msg"></span>
+    <button onclick="document.getElementById('download-toast').classList.add('hidden')" aria-label="Dismiss">✕</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
