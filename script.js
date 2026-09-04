@@ -953,7 +953,7 @@ async function sendMessage(e) {
   try {
     reply = await callAI(text);
   } catch (_) {
-    reply = getLocalAnswer(text);
+    reply = getSmartAnswer(text);
   }
 
   typingEl.querySelector('.msg-bubble').innerHTML = '<p></p>';
@@ -2040,8 +2040,10 @@ var API_TEMPLATES = {
 function updateApiCode() {
   var tpl = API_TEMPLATES[currentApiEndpoint];
   if (!tpl) return;
-  document.getElementById("api-code-display").textContent = tpl[currentApiLang];
-  document.getElementById("api-response-display").textContent = tpl.response;
+  var codeDisplay = document.getElementById("api-code-display");
+  var respDisplay = document.getElementById("api-response-display");
+  if (codeDisplay) codeDisplay.textContent = tpl[currentApiLang];
+  if (respDisplay) respDisplay.textContent = tpl.response;
 }
 
 // Blog Database
