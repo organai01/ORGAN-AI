@@ -53,8 +53,8 @@ function sendWelcomeEmail(user, type) {
       to_email : user.email,
       type     : isNew ? 'Welcome to ORGAN AI – Your AI Universe Awaits! 🚀' : 'Welcome Back to ORGAN AI! 👋',
       message  : isNew
-        ? 'Hey ' + firstName + '! Your ORGAN AI account is ready. You now have access to 40+ AI tools, side-by-side comparisons, and your personal AI Assistant. Explore, discover, and find the perfect AI for everything you do.'
-        : 'Great to see you again, ' + firstName + '! Dive back into 40+ AI tools, explore new additions, and ask your ORGAN AI Assistant anything.',
+        ? 'Hey ' + firstName + '! Your ORGAN AI account is ready. You now have access to 65+ AI tools, side-by-side comparisons, and your personal AI Assistant. Explore, discover, and find the perfect AI for everything you do.'
+        : 'Great to see you again, ' + firstName + '! Dive back into 65+ AI tools, explore new additions, and ask your ORGAN AI Assistant anything.',
       time     : timeStr
     });
   } catch (e) { /* silent – email is a nice-to-have, never breaks login */ }
@@ -467,6 +467,220 @@ const AI_TOOLS = [
     url: "https://aistudio.google.com",
     free: { price: "Free (API)", detail: "Google AI Studio", features: ["Free via AI Studio", "1M token context", "Video & audio analysis", "Code execution tool", "15 RPM / 1M TPD limits"] },
     paid: { price: "$7/1M tokens", detail: "Gemini API paid", features: ["2M token context", "Higher rate limits", "Production SLA", "Vertex AI deployment", "Enterprise support"] }
+  },
+
+  /* ── NEW TOOLS ── TEXT & CHAT ── */
+  {
+    id: "cohere", name: "Cohere Command R+", company: "Cohere", emoji: "🔗", category: "text",
+    description: "Enterprise-grade RAG-optimized LLM — Command R+ excels at retrieval-augmented generation and tool use.",
+    tags: ["RAG", "Enterprise", "API"],
+    url: "https://cohere.com",
+    free: { price: "Free (trial)", detail: "Playground", features: ["Free playground access", "Command R+ trial", "5 API calls/min", "RAG with web search", "Multi-step tool use"] },
+    paid: { price: "$1/1M tokens", detail: "Production API", features: ["Command R+ production", "Unlimited rate (custom)", "Enterprise RAG connectors", "Fine-tuning support", "SOC 2 compliant"] }
+  },
+  {
+    id: "pi", name: "Pi", company: "Inflection AI", emoji: "🥧", category: "text",
+    description: "Emotionally intelligent AI companion — conversational, empathetic, and great for brainstorming and wellbeing.",
+    tags: ["Companion", "Empathetic", "Voice"],
+    url: "https://pi.ai",
+    free: { price: "Free", detail: "Unlimited chat", features: ["Unlimited free conversations", "Voice mode (natural tone)", "Multi-platform (iOS, Android, web)", "Memory across sessions", "Emotionally aware responses"] },
+    paid: { price: "Free (no paid)", detail: "Fully free", features: ["All features included free", "No premium tier currently", "Voice conversations", "Personalized coaching", "Daily check-ins"] }
+  },
+  {
+    id: "kimi", name: "Kimi", company: "Moonshot AI", emoji: "🌙", category: "text",
+    description: "Chinese AI with ultra-long 2M token context — reads entire codebases, books, and document libraries at once.",
+    tags: ["2M context", "Chinese AI", "Long docs"],
+    url: "https://kimi.moonshot.cn",
+    free: { price: "Free", detail: "Kimi Chat", features: ["Free unlimited chat", "2M token context window", "File & URL analysis", "Web search integration", "Code generation"] },
+    paid: { price: "$0.12/1M tokens", detail: "Moonshot API", features: ["Moonshot API access", "128K–2M context options", "Higher rate limits", "Function calling", "Enterprise support"] }
+  },
+  {
+    id: "character-ai", name: "Character.AI", company: "Character Technologies", emoji: "🎭", category: "text",
+    description: "Create and chat with AI characters — millions of user-made personas for roleplay, learning, and entertainment.",
+    tags: ["Characters", "Roleplay", "Social"],
+    url: "https://character.ai",
+    free: { price: "Free", detail: "Standard access", features: ["Unlimited character chats", "Create custom characters", "Community character library", "Group chats", "Mobile apps"] },
+    paid: { price: "$9.99/mo", detail: "c.ai+", features: ["Priority chat (no queues)", "Faster response times", "Early access to new features", "Community supporter badge", "Extended memory"] }
+  },
+
+  /* ── NEW TOOLS ── AI SEARCH ── */
+  {
+    id: "exa", name: "Exa AI", company: "Exa", emoji: "🔬", category: "search",
+    description: "Neural search engine API built for AI — finds precise pages, papers, and data using embeddings, not keywords.",
+    tags: ["Neural search", "API", "Embeddings"],
+    url: "https://exa.ai",
+    free: { price: "Free", detail: "1,000 searches/mo", features: ["1,000 free searches/month", "Neural & keyword search", "Auto-extract page contents", "Similarity search", "Python & JS SDKs"] },
+    paid: { price: "$0.003/search", detail: "Growth Plan", features: ["Pay-per-search pricing", "Higher rate limits", "Content auto-extraction", "Category filters", "Enterprise support"] }
+  },
+  {
+    id: "tavily", name: "Tavily", company: "Tavily", emoji: "🌍", category: "search",
+    description: "Search API purpose-built for AI agents — optimized for LLM consumption with structured, relevant results.",
+    tags: ["AI Agent search", "API", "Structured"],
+    url: "https://tavily.com",
+    free: { price: "Free", detail: "1,000 queries/mo", features: ["1,000 free queries/month", "AI-optimized search results", "Advanced search filters", "Python & REST API", "News & general web search"] },
+    paid: { price: "$0.005/query", detail: "Pro Plan", features: ["Higher rate limits", "Priority infrastructure", "Custom extraction", "Domain filtering", "Enterprise SLA"] }
+  },
+
+  /* ── NEW TOOLS ── VIDEO ── */
+  {
+    id: "kling", name: "Kling AI", company: "Kuaishou", emoji: "🎞️", category: "video",
+    description: "Chinese AI video leader — generates cinematic 1080p videos up to 2 minutes with remarkable motion quality.",
+    tags: ["2-min video", "1080p", "Chinese AI"],
+    url: "https://klingai.com",
+    free: { price: "Free", detail: "66 credits/day", features: ["66 free credits daily", "5-second video generation", "720p resolution", "Image-to-video", "Text-to-video"] },
+    paid: { price: "$8/mo", detail: "Standard Plan", features: ["660 credits/month", "1080p resolution", "2-minute videos", "No watermark", "Priority generation"] }
+  },
+  {
+    id: "luma", name: "Luma Dream Machine", company: "Luma AI", emoji: "💭", category: "video",
+    description: "Fast, high-quality AI video from text or images — Dream Machine generates 5s clips with impressive physics.",
+    tags: ["Dream Machine", "Fast", "Physics"],
+    url: "https://lumalabs.ai",
+    free: { price: "Free", detail: "30 gen/mo", features: ["30 free generations/month", "5-second clips", "Text & image to video", "720p resolution", "Watermark on exports"] },
+    paid: { price: "$9.99/mo", detail: "Standard Plan", features: ["120 generations/month", "1080p resolution", "No watermark", "Priority queue", "Extended 10s clips"] }
+  },
+  {
+    id: "descript", name: "Descript", company: "Descript Inc.", emoji: "✂️", category: "video",
+    description: "AI-powered video and podcast editor — edit video by editing text. Includes filler word removal and AI voices.",
+    tags: ["Video editor", "Podcast", "Text-edit"],
+    url: "https://descript.com",
+    free: { price: "Free", detail: "1 hr transcription", features: ["1 hour of transcription", "Edit video as text", "Screen recording", "Filler word removal", "Stock media library"] },
+    paid: { price: "$24/mo", detail: "Hobbyist Plan", features: ["10 hours transcription/mo", "AI green screen", "Studio Sound (noise removal)", "AI eye contact correction", "Custom AI voice clone"] }
+  },
+  {
+    id: "opus-clip", name: "Opus Clip", company: "Opus AI", emoji: "🎯", category: "video",
+    description: "AI short-form video repurposing — automatically clips long videos into viral TikTok, Reels, and Shorts.",
+    tags: ["Short-form", "Repurpose", "Viral"],
+    url: "https://opus.pro",
+    free: { price: "Free", detail: "60 min upload", features: ["60 minutes of upload", "10 clips per video", "AI curation scoring", "Auto-captions", "Watermarked exports"] },
+    paid: { price: "$15/mo", detail: "Starter Plan", features: ["200 min upload/month", "Unlimited clips", "No watermark", "1080p exports", "Brand templates"] }
+  },
+
+  /* ── NEW TOOLS ── IMAGE ── */
+  {
+    id: "recraft", name: "Recraft V3", company: "Recraft AI", emoji: "🏆", category: "image",
+    description: "Top-ranked on ELO — Recraft V3 generates stunning images with precise text rendering and vector output.",
+    tags: ["ELO #1", "Vectors", "Text rendering"],
+    url: "https://recraft.ai",
+    free: { price: "Free", detail: "50 images/day", features: ["50 free images/day", "Vector SVG generation", "Perfect text in images", "Style consistency", "Background removal"] },
+    paid: { price: "$25/mo", detail: "Recraft Pro", features: ["2,000 images/month", "Priority generation", "Commercial license", "API access", "Custom brand styles"] }
+  },
+  {
+    id: "leonardo", name: "Leonardo AI", company: "Leonardo AI", emoji: "🖌️", category: "image",
+    description: "Versatile AI image platform — fine-tuned models, real-time canvas, and motion for game/product design.",
+    tags: ["Fine-tune", "Canvas", "Motion"],
+    url: "https://leonardo.ai",
+    free: { price: "Free", detail: "150 tokens/day", features: ["150 daily tokens", "Leonardo Phoenix model", "Real-time canvas", "Image-to-image", "Community models"] },
+    paid: { price: "$12/mo", detail: "Apprentice Plan", features: ["8,500 tokens/month", "Private generations", "Alchemy V2 enhancer", "Motion generation", "Priority infrastructure"] }
+  },
+  {
+    id: "playground-ai", name: "Playground", company: "Playground AI", emoji: "🎪", category: "image",
+    description: "Free AI image generation with generous limits — mixed-image editing, canvas mode, and SDXL fine-tunes.",
+    tags: ["Generous free", "Canvas", "SDXL"],
+    url: "https://playground.com",
+    free: { price: "Free", detail: "100 images/day", features: ["100 free images/day", "Playground V3 model", "Board mode (canvas)", "Image-to-image editing", "Community gallery"] },
+    paid: { price: "$15/mo", detail: "Pro Plan", features: ["2,000 images/day", "DALL-E 3 access", "Priority generation", "Private images", "Commercial license"] }
+  },
+
+  /* ── NEW TOOLS ── CODING ── */
+  {
+    id: "v0", name: "v0 by Vercel", company: "Vercel", emoji: "🚀", category: "code",
+    description: "AI-powered UI generation — describe a component in plain text and get production-ready React/Next.js code.",
+    tags: ["UI gen", "React", "Next.js"],
+    url: "https://v0.dev",
+    free: { price: "Free", detail: "200 credits/mo", features: ["200 free credits/month", "React & Next.js components", "Tailwind CSS output", "Shadcn/UI integration", "Copy & paste code"] },
+    paid: { price: "$20/mo", detail: "Premium Plan", features: ["5,000 credits/month", "Priority generation", "Private projects", "Deploy to Vercel", "Team collaboration"] }
+  },
+  {
+    id: "bolt", name: "Bolt.new", company: "StackBlitz", emoji: "⚡", category: "code",
+    description: "Full-stack AI web dev in the browser — generates, edits, and deploys complete apps from a single prompt.",
+    tags: ["Full-stack", "Browser IDE", "Deploy"],
+    url: "https://bolt.new",
+    free: { price: "Free", detail: "Limited tokens", features: ["Limited free daily tokens", "Full-stack app generation", "In-browser code editor", "npm package support", "Deploy to Netlify"] },
+    paid: { price: "$20/mo", detail: "Pro Plan", features: ["10M tokens/month", "Unlimited projects", "Priority model access", "GitHub integration", "Custom domains"] }
+  },
+  {
+    id: "lovable", name: "Lovable", company: "Lovable (GPT Engineer)", emoji: "💜", category: "code",
+    description: "AI full-stack engineer — generates complete web apps with frontend, backend, auth, and database from prompts.",
+    tags: ["Full-stack", "Supabase", "Deploy"],
+    url: "https://lovable.dev",
+    free: { price: "Free", detail: "5 generations/day", features: ["5 free generations/day", "React + Vite + Tailwind", "Supabase integration", "GitHub sync", "Preview & share"] },
+    paid: { price: "$20/mo", detail: "Starter Plan", features: ["100 generations/month", "Custom domains", "Auth & database setup", "Priority support", "Team collaboration"] }
+  },
+  {
+    id: "cody", name: "Cody by Sourcegraph", company: "Sourcegraph", emoji: "🤓", category: "code",
+    description: "AI coding assistant with full codebase context — searches your entire repo to give accurate, grounded answers.",
+    tags: ["Codebase context", "Search", "Enterprise"],
+    url: "https://sourcegraph.com/cody",
+    free: { price: "Free", detail: "Cody Free", features: ["Unlimited autocomplete", "500 chat messages/mo", "VS Code & JetBrains", "Full codebase context", "GPT-4o & Claude 3.5"] },
+    paid: { price: "$9/mo", detail: "Cody Pro", features: ["Unlimited chat messages", "Unlimited commands", "Advanced models access", "Larger context window", "Priority support"] }
+  },
+  {
+    id: "huggingchat", name: "HuggingChat", company: "Hugging Face", emoji: "🤗", category: "code",
+    description: "Open-source AI chat by Hugging Face — access top open models like Llama, Mixtral, and Command R+ for free.",
+    tags: ["Open-source", "Multi-model", "Free"],
+    url: "https://huggingface.co/chat",
+    free: { price: "Free", detail: "Open models", features: ["Fully free to use", "Llama 3.3, Mixtral, Command R+", "Web search integration", "File upload & analysis", "Custom assistants"] },
+    paid: { price: "$9/mo", detail: "HF Pro", features: ["Priority inference", "Access to gated models", "ZeroGPU spaces", "Faster generation", "Community support"] }
+  },
+
+  /* ── NEW TOOLS ── AUDIO ── */
+  {
+    id: "speechify", name: "Speechify", company: "Speechify Inc.", emoji: "📖", category: "audio",
+    description: "AI text-to-speech for reading anything aloud — PDFs, articles, emails with natural-sounding premium voices.",
+    tags: ["TTS", "Reader", "Chrome extension"],
+    url: "https://speechify.com",
+    free: { price: "Free", detail: "Basic voices", features: ["Basic AI voices", "Chrome extension", "Listen to any web page", "PDF upload & read", "10+ languages"] },
+    paid: { price: "$11.58/mo", detail: "Premium Plan", features: ["30+ premium HD voices", "OCR (scan & read images)", "Unlimited listening", "Audiobook imports", "Speed up to 4.5x"] }
+  },
+  {
+    id: "soundraw", name: "Soundraw", company: "Soundraw Inc.", emoji: "🎹", category: "audio",
+    description: "AI music generator for creators — generate royalty-free background music customized by mood, genre, and length.",
+    tags: ["Royalty-free", "Background music", "Customizable"],
+    url: "https://soundraw.io",
+    free: { price: "Free (preview)", detail: "Generate & preview", features: ["Unlimited generation", "Preview tracks", "Customize mood & tempo", "Multiple genres", "No download on free"] },
+    paid: { price: "$16.99/mo", detail: "Creator Plan", features: ["Unlimited downloads", "Royalty-free for YouTube, TikTok", "Custom track lengths", "Stems & loops", "Commercial license"] }
+  },
+
+  /* ── NEW TOOLS ── BUSINESS ── */
+  {
+    id: "grammarly", name: "Grammarly AI", company: "Grammarly", emoji: "📝", category: "business",
+    description: "AI writing assistant for clarity, tone, and correctness — now with generative AI for drafting and rewriting.",
+    tags: ["Grammar", "Tone", "Writing"],
+    url: "https://grammarly.com",
+    free: { price: "Free", detail: "Basic corrections", features: ["Grammar & spelling checks", "Tone detection", "Basic clarity suggestions", "Chrome & Edge extension", "Mobile keyboard"] },
+    paid: { price: "$12/mo", detail: "Grammarly Premium", features: ["Full sentence rewrites", "AI text generation", "Tone adjustments", "Plagiarism detection", "Brand tones & style guides"] }
+  },
+  {
+    id: "writesonic", name: "Writesonic", company: "Writesonic Inc.", emoji: "✏️", category: "business",
+    description: "AI content platform for blogs, ads, and landing pages — includes Chatsonic (GPT-4 powered chat with web access).",
+    tags: ["Blog writing", "Ads", "Chatsonic"],
+    url: "https://writesonic.com",
+    free: { price: "Free", detail: "10K words/mo", features: ["10,000 words/month", "Chatsonic AI chat", "25+ languages", "Browser extension", "Landing page generator"] },
+    paid: { price: "$16/mo", detail: "Pro Plan", features: ["100K words/month", "GPT-4 & Claude access", "Bulk content generation", "API access", "Brand voice training"] }
+  },
+  {
+    id: "dify", name: "Dify", company: "Dify AI", emoji: "🧩", category: "business",
+    description: "Open-source LLM app development platform — visual workflow builder for AI agents, RAG pipelines, and chatbots.",
+    tags: ["LLM Ops", "Workflow", "Open-source"],
+    url: "https://dify.ai",
+    free: { price: "Free (self-host)", detail: "Open-source", features: ["Fully open-source (self-host)", "Visual workflow builder", "RAG pipeline builder", "200+ model integrations", "Community edition unlimited"] },
+    paid: { price: "$59/mo", detail: "Professional", features: ["Dify Cloud hosted", "Team collaboration", "Priority support", "Custom branding", "Advanced analytics"] }
+  },
+  {
+    id: "coze", name: "Coze", company: "ByteDance", emoji: "🤖", category: "business",
+    description: "ByteDance's AI bot builder — create and deploy AI chatbots with plugins, workflows, and knowledge bases.",
+    tags: ["Bot builder", "No-code", "ByteDance"],
+    url: "https://coze.com",
+    free: { price: "Free", detail: "Generous limits", features: ["GPT-4o & Gemini Pro access", "Plugin marketplace", "Knowledge base upload", "Workflow automation", "Multi-platform deploy"] },
+    paid: { price: "$9/mo", detail: "Premium Plan", features: ["Higher API limits", "Premium model access", "Priority support", "Team workspace", "Advanced analytics"] }
+  },
+  {
+    id: "letta", name: "Letta (MemGPT)", company: "Letta AI", emoji: "🧠", category: "multimodal",
+    description: "AI agents with persistent memory — open-source framework for building stateful, long-running AI agents.",
+    tags: ["Memory", "Agents", "Open-source"],
+    url: "https://letta.com",
+    free: { price: "Free (open-source)", detail: "Self-host", features: ["Fully open-source", "Persistent memory system", "Multi-session context", "Tool use & function calling", "Local or cloud deployment"] },
+    paid: { price: "$25/mo", detail: "Letta Cloud", features: ["Managed cloud hosting", "Team collaboration", "Agent monitoring dashboard", "Priority support", "Enterprise SSO"] }
   }
 ];
 
@@ -474,7 +688,7 @@ const AI_TOOLS = [
    2.  ORGAN AI ASSISTANT  (Puter.js · free GPT-4o · no API key)
    ───────────────────────────────────────────────────── */
 
-const SYSTEM_PROMPT = `You are ORGAN Assistant, the expert AI guide for ORGAN AI — a platform that tracks 40+ major AI tools (free and paid) in one place.
+const SYSTEM_PROMPT = `You are ORGAN Assistant, the expert AI guide for ORGAN AI — a platform that tracks 65+ major AI tools (free and paid) in one place.
 Your job: help users discover, compare, and choose AI tools.
 Rules:
 - Be concise, friendly, and direct (under 150 words)
@@ -486,15 +700,32 @@ Rules:
 /* Conversation history for multi-turn context */
 const chatHistory = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-/* ── Puter.js AI call (free GPT-4o, no key needed) ── */
+/* ── Helper: check if Puter is authenticated (prevents popup) ── */
+function isPuterReady() {
+  try {
+    if (typeof puter === 'undefined' || !puter.ai) return false;
+    // Puter.js v2 sets puter.authToken when user is signed in
+    if (puter.authToken) return true;
+    // Also check the auth module if available
+    if (puter.auth && typeof puter.auth.isSignedIn === 'function') {
+      return puter.auth.isSignedIn();
+    }
+    // If running on puter.com domain, it's always ready
+    if (window.location.hostname.includes('puter.com')) return true;
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* ── Puter.js AI call (only if already authenticated — NO popup) ── */
 async function callAI(userMessage) {
   chatHistory.push({ role: 'user', content: userMessage });
 
-  // 1️⃣ Primary: Puter.js free GPT-4o
-  if (typeof puter !== 'undefined' && puter.ai) {
+  // 1️⃣ Primary: Puter.js — ONLY if already signed in (never trigger popup)
+  if (isPuterReady()) {
     try {
       const resp = await puter.ai.chat(chatHistory, { model: 'gpt-4o-mini' });
-      // Puter returns either a string or an object
       let text = '';
       if (typeof resp === 'string') {
         text = resp;
@@ -514,47 +745,148 @@ async function callAI(userMessage) {
     }
   }
 
-  // 2️⃣ Fallback: local curated knowledge base
+  // 2️⃣ Fallback: smart local AI engine (searches tool database)
   chatHistory.pop(); // remove failed user turn
   chatHistory.push({ role: 'user', content: userMessage });
-  const local = getLocalAnswer(userMessage);
+  const local = getSmartAnswer(userMessage);
   chatHistory.push({ role: 'assistant', content: local });
   return local;
 }
 
-/* ── Local curated knowledge (used when Puter is unavailable) ── */
-function getLocalAnswer(q) {
-  q = q.toLowerCase();
-  const answers = [
+/* ── Smart Local AI Engine (searches AI_TOOLS database dynamically) ── */
+function getSmartAnswer(q) {
+  const ql = q.toLowerCase().trim();
+
+  // ── 1. Curated high-quality answers for common questions ──
+  const curated = [
     [['best free', 'free ai', 'free coding', 'free code'],
-     'For free coding AI: **GitHub Copilot Free** (2,000 completions/mo), **Windsurf by Codeium** (unlimited autocomplete), and **Cursor Hobby** (50 slow requests/mo). All genuinely free — no credit card!'],
+     'For free coding AI: **GitHub Copilot Free** (2,000 completions/mo), **Windsurf by Codeium** (unlimited autocomplete), **Cursor Hobby** (50 slow requests/mo), **v0 by Vercel** (200 credits/mo for UI gen), and **Bolt.new** (full-stack apps in browser). All genuinely free!'],
     [['chatgpt vs claude', 'gpt vs claude', 'compare chatgpt', 'compare claude'],
-     '**ChatGPT** excels at reasoning, coding, and versatility with GPT-4o. **Claude** shines at long documents (200K context), nuanced writing, and safety. Both cost $20/mo for paid. Try both free tiers!'],
+     '**ChatGPT** excels at reasoning, coding, and versatility with GPT-4o. **Claude** shines at long documents (200K context), nuanced writing, and safety. Both cost $20/mo for paid tiers. Try both free tiers to see which fits your style!'],
+    [['chatgpt vs gemini', 'gpt vs gemini', 'compare gemini'],
+     '**ChatGPT** (GPT-4o) leads in coding and reasoning. **Gemini** excels at Google integration (Gmail, Docs, Drive) and has a massive 2M token context. Both are free with paid tiers at $20/mo. Choose Gemini if you live in Google Workspace!'],
     [['cheap image', 'cheapest image', 'free image', 'budget image'],
-     'Cheapest image AI: **FLUX.1 Schnell** (free, open-source), **Stable Diffusion** (free self-hosted), **Adobe Firefly** (25 free credits/mo), **Ideogram** ($8/mo). FLUX.1 locally is state-of-the-art and free!'],
-    [['music', 'song', 'audio gen', 'free music'],
-     '**Suno** gives 50 credits/day (~10 songs) and **Udio** gives 1,200 credits/month (~300 songs). Both generate full songs with lyrics from text. Udio is more generous on the free tier!'],
+     'Cheapest image AI: **Playground** (100 free/day!), **Recraft V3** (50 free/day), **FLUX.1 Schnell** (free open-source), **Leonardo AI** (150 tokens/day), **Adobe Firefly** (25 free/mo), **Ideogram** (10 free/day). FLUX.1 self-hosted is unlimited and SOTA!'],
+    [['music', 'song', 'audio gen', 'free music', 'make music', 'create music'],
+     '**Suno** gives 50 credits/day (~10 songs) and **Udio** gives 1,200 credits/month (~300 songs). Both generate full songs with vocals from text. **Soundraw** is great for royalty-free background music. Udio is the most generous free tier!'],
     [['gemini', 'google ai'],
-     '**Gemini** by Google DeepMind is free (1.5 Flash) and integrates with Google Workspace. Gemini Advanced ($20/mo) unlocks the Ultra model, 1TB Google One storage, and Gemini inside Gmail, Docs, and Slides.'],
-    [['voice', 'text to speech', 'tts'],
-     'Best voice AI: **ElevenLabs** (10K free chars/mo, best quality), **Murf AI** (10 min free/mo, great for videos), **OpenAI Whisper** (free open-source STT). ElevenLabs is the gold standard for voice cloning!'],
-    [['video', 'ai video', 'text to video'],
-     'Top AI video: **Runway Gen-3** (125 free credits), **Pika** (150 credits/mo free), **Sora** (free 480p, $20/mo for HD), **HeyGen** for AI avatars and lip-sync translation to 40+ languages.'],
-    [['image', 'picture', 'art', 'generate image'],
-     'Best image AI: **Adobe Firefly** (25 free/mo), **Ideogram** (10 free/day), **Canva AI** (50 free/mo). Premium: **Midjourney** ($10/mo) is the gold standard. **FLUX.1** is free open-source!'],
-    [['hello', 'hi ', 'hey '],
-     "Hello! I'm your ORGAN AI Assistant 🤖 Ask me anything about AI tools — pricing, comparisons, which AI is best for coding, art, music, writing, or video. I track 42+ AI tools! How can I help?"],
-    [['organ ai', 'what is organ', 'about'],
-     'ORGAN AI is your ultimate AI tools hub — tracking 42+ major AI tools across 8 categories with detailed free and paid plan breakdowns. Search, filter, compare, and find the perfect AI, all in one place!'],
-    [['coding', 'code', 'programming', 'developer'],
-     'Top coding AIs: **GitHub Copilot** (free tier!), **Cursor** (VS Code fork, $20/mo), **Windsurf** (free unlimited), **Amazon Q** (free 10K/mo), **Replit AI** (cloud IDE). For autocomplete: Windsurf is the best free option.'],
-    [['business', 'marketing', 'writing', 'content'],
-     'Top business AIs: **Notion AI** ($10/mo add-on), **Jasper** ($49/mo, best for marketing), **Copy.ai** (free 2K words/mo), **Claude** (excellent for long-form writing). For SEO: Jasper with Surfer is the gold standard.'],
+     '**Gemini** by Google DeepMind is free (1.5 Flash) and integrates with Google Workspace. Gemini Advanced ($20/mo) unlocks the Ultra model, 1TB Google One storage, and Gemini inside Gmail, Docs, and Slides. **Gemini 1.5 Pro** has a 2M token context via API!'],
+    [['voice', 'text to speech', 'tts', 'voice clone', 'clone voice'],
+     'Best voice AI: **ElevenLabs** (10K free chars/mo, best quality), **Speechify** (free Chrome extension), **Murf AI** (10 min free/mo), **OpenAI Whisper** (free open-source STT). ElevenLabs is the gold standard for voice cloning!'],
+    [['video', 'ai video', 'text to video', 'make video', 'create video'],
+     'Top AI video: **Kling AI** (66 free credits/day, up to 2 min!), **Runway Gen-3** (125 free credits), **Pika** (150/mo free), **Luma Dream Machine** (30 free/mo), **Sora** ($20/mo for HD). For short-form clips: **Opus Clip** auto-clips long videos into TikToks!'],
+    [['image', 'picture', 'art', 'generate image', 'ai art', 'create image'],
+     'Best image AI: **Playground** (100 free/day!), **Recraft V3** (50 free/day, ELO #1), **Leonardo AI** (150 tokens/day), **Adobe Firefly** (25 free/mo), **Canva AI** (50 free/mo). Premium: **Midjourney** ($10/mo) is the gold standard. **FLUX.1** is free open-source!'],
+    [['hello', 'hi', 'hey', 'good morning', 'good evening', 'sup'],
+     "Hello! I'm your **ORGAN AI Assistant** 🤖 I know everything about 65+ AI tools — pricing, free tiers, comparisons, and recommendations.\n\nTry asking me:\n• \"Best free coding AI?\"\n• \"ChatGPT vs Claude?\"\n• \"Free image generators?\"\n• \"Which AI makes music?\"\n• \"Compare video AI tools\"\n\nWhat can I help you find?"],
+    [['organ ai', 'what is organ', 'about organ', 'this site', 'this website'],
+     '**ORGAN AI** is your ultimate AI tools hub — tracking **65+ major AI tools** across 8 categories (Text, Image, Code, Audio, Video, Search, Business, Multimodal) with detailed free and paid plan breakdowns. Search, filter, compare, and find the perfect AI for any task!'],
+    [['coding', 'code', 'programming', 'developer', 'programmer', 'ide'],
+     'Top coding AIs: **GitHub Copilot** (free 2K completions/mo), **Cursor** (AI-native IDE, $20/mo), **Windsurf** (free unlimited autocomplete), **v0 by Vercel** (AI UI gen), **Bolt.new** (full-stack in browser), **Lovable** (AI full-stack engineer), **Cody** (full codebase context). Best free: Windsurf!'],
+    [['business', 'marketing', 'writing', 'content', 'copywriting', 'seo'],
+     'Top business AIs: **Grammarly AI** (free grammar + AI writing), **Notion AI** ($10/mo add-on), **Jasper** ($49/mo, best for marketing + SEO), **Copy.ai** (free 2K words/mo), **Writesonic** (free 10K words/mo), **Dify** (open-source LLM workflow builder), **Coze** (free AI bot builder by ByteDance).'],
+    [['search', 'ai search', 'research', 'perplexity'],
+     'Top AI search: **Perplexity AI** (free unlimited, $20/mo Pro with GPT-4o), **You.com** (privacy-first, $15/mo Pro), **Exa AI** (neural search API, 1K free/mo), **Tavily** (AI agent search API, 1K free/mo). Perplexity is the best for everyday research with cited answers!'],
+    [['open source', 'open-source', 'self host', 'local', 'run locally', 'offline'],
+     'Best open-source/local AI: **Llama 3.3 70B** (Meta, free commercial use), **DeepSeek V3/R1** (rivals GPT-4, free), **Qwen 2.5 72B** (Alibaba, Apache 2.0), **FLUX.1 Schnell** (image gen), **Whisper** (speech-to-text), **Stable Diffusion** (image gen), **Dify** (LLM app builder), **Letta/MemGPT** (agents with memory). Run via Ollama or LM Studio!'],
+    [['chatgpt', 'gpt', 'openai'],
+     '**ChatGPT** by OpenAI: Free tier gives GPT-4o (limited daily) + GPT-3.5 unlimited. **ChatGPT Plus** ($20/mo) adds unlimited GPT-4o, o1/o3 models, DALL·E 3 image gen, Custom GPTs, and Advanced Data Analysis. Best all-around AI assistant!'],
+    [['claude', 'anthropic'],
+     '**Claude** by Anthropic: Free tier gives Claude 3.5 Haiku with limited messages. **Claude Pro** ($20/mo) adds 5× more usage, Claude 3.5 Sonnet & Opus, priority access, and extended thinking mode. Best for long documents (200K context) and nuanced writing!'],
+    [['midjourney', 'mj'],
+     '**Midjourney** — the gold standard for AI art. No free tier (trial was discontinued). **Basic Plan** ($10/mo) gives 200 images/month. Creates stunning photorealistic and artistic images via Discord or web. Best image quality, but no free option.'],
+    [['grok', 'xai', 'x ai'],
+     '**Grok** by xAI: Free Grok 2 with real-time X/Twitter data. **X Premium+** ($16/mo) unlocks Grok 3, unlimited queries, Think mode (deep reasoning), SuperGrok image gen, and DeepSearch research mode. Best for real-time news and unfiltered answers!'],
+    [['deepseek', 'deep seek'],
+     '**DeepSeek** — Chinese open-source AI rivaling GPT-4 at a fraction of the cost. Free chat at deepseek.com, R1 reasoning model included. API at just $0.27/1M tokens (cache-hit: $0.07/1M). Fully open-source models downloadable!'],
+    [['free', 'no cost', 'free tier', 'free plan'],
+     'Best completely free AI tools: **Pi** (unlimited chat), **DeepSeek** (free chat + R1), **HuggingChat** (open models), **Playground** (100 images/day), **Recraft V3** (50 images/day), **Suno** (10 songs/day), **Kling AI** (66 video credits/day), **Whisper** (unlimited local STT), **Coze** (free bot builder with GPT-4o)!'],
+    [['compare', 'vs', 'versus', 'which is better', 'what should i use', 'recommend'],
+     "I can compare any AI tools for you! Here are popular comparisons:\n• **ChatGPT vs Claude** — GPT-4o vs 200K context\n• **Midjourney vs FLUX.1** — paid quality vs free open-source\n• **Suno vs Udio** — AI music generators\n• **Cursor vs Windsurf** — AI coding IDEs\n• **Runway vs Kling** — AI video generators\n\nAsk me any specific comparison and I'll break it down!"],
+    [['price', 'pricing', 'cost', 'how much', 'expensive', 'cheap', 'affordable'],
+     "Most AI tools have free tiers! Budget picks:\n• **Free**: DeepSeek, Pi, HuggingChat, Playground, Coze\n• **Under $10/mo**: Suno ($8), Pika ($8), Kling ($8), ElevenLabs ($5), Cody ($9)\n• **$10-20/mo**: ChatGPT Plus ($20), Claude Pro ($20), Copilot ($10), Cursor ($20)\n• **Premium**: Jasper ($49), Synthesia ($18), M365 Copilot ($22)\n\nClick any tool card to see full pricing details!"],
+    [['thank', 'thanks', 'thx', 'appreciate'],
+     "You're welcome! 😊 I'm always here to help you find the perfect AI tool. Feel free to ask me anything else — comparisons, pricing, recommendations — I know 65+ AI tools inside and out! 🚀"],
+    [['who are you', 'what are you', 'your name'],
+     "I'm the **ORGAN AI Assistant** 🤖 — your personal guide to the universe of AI tools! I know detailed pricing, features, and comparisons for 65+ major AI tools across 8 categories. Ask me anything!"],
   ];
-  for (const [keys, ans] of answers) {
-    if (keys.some(k => q.includes(k))) return ans;
+
+  for (const [keys, ans] of curated) {
+    if (keys.some(k => ql.includes(k))) return ans;
   }
-  return "Great question! I track 42+ AI tools. Try asking: \"best free coding AI\", \"ChatGPT vs Claude\", \"cheapest image AI\", \"free music tools\" — I'll find the perfect AI for you! 🚀";
+
+  // ── 2. Dynamic tool search — find tools matching the query ──
+  const matchedTools = AI_TOOLS.filter(t => {
+    const searchable = [
+      t.name, t.company, t.description, t.category,
+      ...(t.tags || []),
+      t.free?.detail || '', t.paid?.detail || ''
+    ].join(' ').toLowerCase();
+    // Split user query into words and check if any match
+    const words = ql.split(/\s+/).filter(w => w.length > 2);
+    return words.some(w => searchable.includes(w));
+  });
+
+  if (matchedTools.length > 0) {
+    // Build a rich response from matched tools
+    const top = matchedTools.slice(0, 5); // show max 5 results
+    let response = '';
+
+    if (matchedTools.length === 1) {
+      const t = matchedTools[0];
+      response = `**${t.name}** by ${t.company} ${t.emoji}\n\n`;
+      response += `${t.description}\n\n`;
+      response += `🆓 **Free**: ${t.free.price} — ${t.free.detail}\n`;
+      response += t.free.features.slice(0, 3).map(f => `  • ${f}`).join('\n') + '\n\n';
+      response += `💎 **Paid**: ${t.paid.price} — ${t.paid.detail}\n`;
+      response += t.paid.features.slice(0, 3).map(f => `  • ${f}`).join('\n') + '\n\n';
+      response += `🔗 [Visit ${t.name}](${t.url})`;
+    } else {
+      response = `Found **${matchedTools.length} tools** matching your query:\n\n`;
+      top.forEach(t => {
+        response += `${t.emoji} **${t.name}** (${t.company}) — ${t.free.price}`;
+        if (t.paid.price && !t.paid.price.includes('Free')) {
+          response += ` · Paid: ${t.paid.price}`;
+        }
+        response += `\n  ${t.description.split('—')[0].trim()}\n\n`;
+      });
+      if (matchedTools.length > 5) {
+        response += `…and ${matchedTools.length - 5} more! Use the search bar above to explore all results.`;
+      }
+    }
+    return response;
+  }
+
+  // ── 3. Category-based answers ──
+  const categoryMap = {
+    text: { label: '✍ Text & Chat', tools: [] },
+    image: { label: '🎨 Image Generation', tools: [] },
+    code: { label: '💻 Coding', tools: [] },
+    audio: { label: '🎵 Audio & Voice', tools: [] },
+    video: { label: '🎬 Video', tools: [] },
+    search: { label: '🔎 AI Search', tools: [] },
+    business: { label: '💼 Business', tools: [] },
+    multimodal: { label: '🌐 Multimodal', tools: [] }
+  };
+  AI_TOOLS.forEach(t => {
+    if (categoryMap[t.category]) categoryMap[t.category].tools.push(t);
+  });
+
+  for (const [cat, info] of Object.entries(categoryMap)) {
+    if (ql.includes(cat)) {
+      let resp = `**${info.label}** — ${info.tools.length} tools available:\n\n`;
+      info.tools.slice(0, 6).forEach(t => {
+        resp += `${t.emoji} **${t.name}** — ${t.free.price}`;
+        if (t.paid.price && !t.paid.price.includes('Free')) resp += ` · ${t.paid.price}`;
+        resp += '\n';
+      });
+      if (info.tools.length > 6) resp += `\n…and ${info.tools.length - 6} more in this category!`;
+      return resp;
+    }
+  }
+
+  // ── 4. General fallback ──
+  return "Great question! I'm the **ORGAN AI Assistant** and I know 65+ AI tools inside and out 🧠\n\nTry asking me:\n• \"Tell me about ChatGPT\"\n• \"Best free coding AI?\"\n• \"ChatGPT vs Claude\"\n• \"Free image generators\"\n• \"Which AI makes music?\"\n• \"Compare video AI tools\"\n• \"Best open-source AI\"\n• \"Cheapest AI tools\"\n\nOr just type any AI tool name and I'll give you the full breakdown! 🚀";
 }
 
 /* ── Render markdown-lite (bold + line breaks) ── */
