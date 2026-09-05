@@ -51,9 +51,13 @@
       </a>
 
       <nav class="nav-links" aria-label="Main navigation">
+        <a href="#professions-section" class="nav-link">Professions</a>
+        <a href="#smart-finder-section" class="nav-link">Smart Finder</a>
+        <a href="#workflows-section" class="nav-link">Workflows</a>
+        <a href="#compare-section" class="nav-link">Compare</a>
+        <a href="#prompts-section" class="nav-link">Prompts</a>
         <a href="#tools-section" class="nav-link">AI Tools</a>
-        <a href="#assistant-section" class="nav-link">AI Assistant</a>
-        <a href="#games-section" class="nav-link">Games</a>
+        <a href="#assistant-section" class="nav-link">Assistant</a>
       </nav>
 
       <div class="nav-auth">
@@ -78,9 +82,13 @@
 
     <!-- Mobile nav -->
     <div class="mobile-nav hidden" id="mobile-nav">
-      <a href="#tools-section" onclick="toggleMobileNav()">🔍 AI Tools</a>
+      <a href="#professions-section" onclick="toggleMobileNav()">🎯 Professions (20)</a>
+      <a href="#smart-finder-section" onclick="toggleMobileNav()">⚡ Smart Finder</a>
+      <a href="#workflows-section" onclick="toggleMobileNav()">🔗 Workflows</a>
+      <a href="#compare-section" onclick="toggleMobileNav()">⚖️ Compare Tools</a>
+      <a href="#prompts-section" onclick="toggleMobileNav()">💡 Prompt Library</a>
+      <a href="#tools-section" onclick="toggleMobileNav()">🔍 AI Tools Directory</a>
       <a href="#assistant-section" onclick="toggleMobileNav()">🤖 AI Assistant</a>
-      <a href="#games-section" onclick="toggleMobileNav()">🎮 Games</a>
       <button onclick="openModal('signin-modal');toggleMobileNav()" style="color:var(--white-90);text-align:left;padding:0.5rem 0;border-bottom:1px solid var(--border)">🔐 Sign In / Sign Up</button>
     </div>
   </header>
@@ -211,6 +219,7 @@
       <!-- Filters -->
       <div class="filter-bar" role="tablist" aria-label="Filter by category">
         <button class="filter-pill active" data-filter="all"        role="tab" aria-selected="true">All</button>
+        <button class="filter-pill"        data-filter="saved"      id="saved-filter-pill" role="tab" aria-selected="false">⭐ Saved (<span id="saved-count">0</span>)</button>
         <button class="filter-pill"        data-filter="text"       role="tab" aria-selected="false">✍ Text &amp; Chat</button>
         <button class="filter-pill"        data-filter="image"      role="tab" aria-selected="false">🎨 Image</button>
         <button class="filter-pill"        data-filter="code"       role="tab" aria-selected="false">💻 Coding</button>
@@ -247,87 +256,171 @@
 
 
   <!-- ═══════════════════════════════════════════
-       FREE ONLINE GAMES
+       AI TOOL OF THE DAY (SPOTLIGHT)
   ═══════════════════════════════════════════ -->
-  <section class="section games-section" id="games-section" aria-labelledby="games-title">
+  <section class="section tod-section" id="tool-of-day-section" style="padding: 2.5rem 0 1rem;">
     <div class="section-inner">
-      <div class="section-label">FREE BROWSER GAMES</div>
-      <h2 class="section-title" id="games-title">Play Free Online <span class="neon-text">Games</span></h2>
-      <p class="section-subtitle">Discover and play thousands of free browser games instantly.</p>
-
-      <!-- Search -->
-      <div class="search-wrapper" role="search">
-        <span class="search-icon" aria-hidden="true">⌕</span>
-        <input type="search" id="games-search-input" class="search-input" placeholder="Search free games…" aria-label="Search games" autocomplete="off" />
-        <span class="search-count" id="games-search-count"></span>
+      <div id="tool-of-the-day-container">
+        <!-- Rendered dynamically via JS -->
       </div>
+    </div>
+  </section>
 
-      <!-- Category Filters -->
-      <div class="filter-bar" role="tablist" aria-label="Filter games by category">
-        <button class="filter-pill active" data-game-filter="all"          role="tab" aria-selected="true">All</button>
-        <button class="filter-pill"        data-game-filter="action"       role="tab" aria-selected="false">💥 Action</button>
-        <button class="filter-pill"        data-game-filter="racing"       role="tab" aria-selected="false">🏎️ Racing</button>
-        <button class="filter-pill"        data-game-filter="puzzle"       role="tab" aria-selected="false">🧩 Puzzle</button>
-        <button class="filter-pill"        data-game-filter="adventure"    role="tab" aria-selected="false">🗺️ Adventure</button>
-        <button class="filter-pill"        data-game-filter="multiplayer"  role="tab" aria-selected="false">👥 Multiplayer</button>
-        <button class="filter-pill"        data-game-filter="strategy"     role="tab" aria-selected="false">♟️ Strategy</button>
-        <button class="filter-pill"        data-game-filter="sports"       role="tab" aria-selected="false">⚽ Sports</button>
-        <button class="filter-pill"        data-game-filter="arcade"       role="tab" aria-selected="false">👾 Arcade</button>
+  <!-- ═══════════════════════════════════════════
+       SMART AI FINDER ("What do you want to do?")
+  ═══════════════════════════════════════════ -->
+  <section class="section smart-finder-section" id="smart-finder-section" aria-labelledby="finder-title">
+    <div class="section-inner">
+      <div class="section-label">NATURAL LANGUAGE DISCOVERY</div>
+      <h2 class="section-title" id="finder-title">Smart <span class="neon-text">AI Finder</span></h2>
+      <p class="section-subtitle">Describe what you want to achieve in plain English — we'll match the best AI tools and models.</p>
+
+      <div class="smart-finder-box">
+        <div class="finder-input-wrapper">
+          <span class="finder-icon" aria-hidden="true">⚡</span>
+          <input
+            type="search"
+            id="finder-input"
+            class="finder-input"
+            placeholder="Try: 'create youtube video with voiceover', 'analyze financial spreadsheet', 'write thesis citations'..."
+            aria-label="Describe what you want to do"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="finder-chips-row">
+          <span class="finder-chips-label">Popular Tasks:</span>
+          <button class="finder-chip" onclick="applyFinderChip('Create YouTube video with voiceover and captions')">🎬 YouTube Video</button>
+          <button class="finder-chip" onclick="applyFinderChip('Build and deploy full-stack web application')">💻 Full-Stack Web App</button>
+          <button class="finder-chip" onclick="applyFinderChip('Literature review with verified academic citations')">📝 Academic Paper</button>
+          <button class="finder-chip" onclick="applyFinderChip('Financial model and pitch deck presentation')">📊 Startup Pitch Deck</button>
+          <button class="finder-chip" onclick="applyFinderChip('Review contract legal clauses and risks')">⚖️ Legal Contract Review</button>
+          <button class="finder-chip" onclick="applyFinderChip('Generate vector logos and brand assets')">🎨 Brand Identity</button>
+        </div>
+
+        <div class="finder-results-container hidden" id="finder-results-box">
+          <div class="finder-results-header">
+            <h3 class="finder-results-title" id="finder-results-title">Recommended AI Tools</h3>
+            <span class="finder-chips-label" id="finder-results-count"></span>
+          </div>
+          <div class="tool-grid" id="finder-results-grid"></div>
+        </div>
       </div>
+    </div>
+  </section>
 
-      <!-- Toolbar -->
-      <div class="games-toolbar">
-        <p class="results-label" id="games-results-label" aria-live="polite"></p>
-        <button class="games-fav-toggle" id="fav-toggle-btn" onclick="toggleFavoritesView()">
-          <span id="fav-toggle-icon">♡</span> My Favorites
-        </button>
-      </div>
+  <!-- ═══════════════════════════════════════════
+       AI FOR EVERY PROFESSION
+  ═══════════════════════════════════════════ -->
+  <section class="section professions-section" id="professions-section" aria-labelledby="professions-title">
+    <div class="section-inner">
+      <div class="section-label">ROLE-BASED INTELLIGENCE</div>
+      <h2 class="section-title" id="professions-title">AI for <span class="neon-text">Every Profession</span></h2>
+      <p class="section-subtitle">20 tailored industry hubs with real-world workflows, vetted tools, and high-impact prompts.</p>
 
-      <!-- Recently Played -->
-      <div id="recently-played-section" class="games-sub-section hidden">
-        <h3 class="games-sub-title">🕐 Recently Played</h3>
-        <div class="games-scroll-row" id="recently-played-row"></div>
-      </div>
+      <!-- "I AM A ... I WANT TO ..." Recommender -->
+      <div class="recommender-card">
+        <div class="recommender-row">
+          <div class="recommender-field">
+            <label class="recommender-label" for="rec-prof-select">I AM A</label>
+            <select id="rec-prof-select" class="recommender-select" onchange="onRecommenderProfChange()">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+          <div class="recommender-field">
+            <label class="recommender-label" for="rec-task-select">I WANT TO</label>
+            <select id="rec-task-select" class="recommender-select">
+              <!-- Dynamically populated based on selected profession -->
+            </select>
+          </div>
+          <button class="btn-neon" onclick="runRecommender()" style="height:48px;margin-top:1.1rem;white-space:nowrap;">
+            Recommend AI →
+          </button>
+        </div>
 
-      <!-- Featured Games -->
-      <div id="featured-section" class="games-sub-section">
-        <h3 class="games-sub-title">⭐ Featured Games</h3>
-        <div class="featured-games-row" id="featured-games-row"></div>
-      </div>
-
-      <!-- Trending Games -->
-      <div id="trending-section" class="games-sub-section">
-        <h3 class="games-sub-title">🔥 Trending Now</h3>
-        <div class="games-grid" id="trending-games-grid" aria-label="Trending games"></div>
-      </div>
-
-      <!-- New Games -->
-      <div id="new-section" class="games-sub-section">
-        <h3 class="games-sub-title">🆕 New Games</h3>
-        <div class="games-grid" id="new-games-grid" aria-label="New games"></div>
-      </div>
-
-      <!-- All Games (search/filter results) -->
-      <div id="all-games-section" class="games-sub-section hidden">
-        <h3 class="games-sub-title" id="all-games-title">All Games</h3>
-        <div class="games-grid" id="all-games-grid" aria-label="All games"></div>
-      </div>
-
-      <!-- Favorites -->
-      <div id="favorites-section" class="games-sub-section hidden">
-        <h3 class="games-sub-title">❤️ My Favorite Games</h3>
-        <div class="games-grid" id="favorites-grid" aria-label="Favorite games"></div>
-        <div class="no-results hidden" id="games-no-favorites">
-          <div class="no-results-icon">💔</div>
-          <h3>No favorites yet</h3>
-          <p>Click the heart on any game to save it here.</p>
+        <div class="recommender-results hidden" id="recommender-results">
+          <div class="finder-results-header">
+            <h3 class="finder-results-title" id="recommender-results-title"></h3>
+          </div>
+          <div class="recommender-rec-grid" id="recommender-cards-grid"></div>
         </div>
       </div>
 
-      <div class="no-results hidden" id="games-no-results" aria-live="polite">
-        <div class="no-results-icon">🎮</div>
-        <h3>No games found</h3>
-        <p>Try a different search or category.</p>
+      <!-- 20 Professions Grid -->
+      <div class="professions-grid" id="professions-grid">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       AI WORKFLOWS (MULTI-TOOL PIPELINES)
+  ═══════════════════════════════════════════ -->
+  <section class="section workflows-section" id="workflows-section" aria-labelledby="workflows-title">
+    <div class="section-inner">
+      <div class="section-label">PRODUCTIVITY CHAINS</div>
+      <h2 class="section-title" id="workflows-title">Multi-Tool <span class="neon-text">AI Workflows</span></h2>
+      <p class="section-subtitle">Step-by-step tool stacks that connect specialized AI models to complete end-to-end projects.</p>
+
+      <div class="workflows-grid" id="workflows-grid">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       COMPARE AI TOOLS
+  ═══════════════════════════════════════════ -->
+  <section class="section compare-section" id="compare-section" aria-labelledby="compare-title">
+    <div class="section-inner">
+      <div class="section-label">HEAD-TO-HEAD MATRIX</div>
+      <h2 class="section-title" id="compare-title">Compare <span class="neon-text">AI Tools</span></h2>
+      <p class="section-subtitle">Side-by-side technical breakdown of capabilities, pricing, pros, cons, and ideal use cases.</p>
+
+      <div class="compare-box">
+        <div class="compare-presets-bar">
+          <span class="compare-presets-label">Popular Battles:</span>
+          <button class="compare-preset-btn active" onclick="loadComparisonPreset('chatgpt-vs-claude')">ChatGPT vs Claude</button>
+          <button class="compare-preset-btn" onclick="loadComparisonPreset('cursor-vs-copilot')">Cursor vs GitHub Copilot</button>
+          <button class="compare-preset-btn" onclick="loadComparisonPreset('midjourney-vs-flux')">Midjourney vs FLUX.1</button>
+          <button class="compare-preset-btn" onclick="loadComparisonPreset('runway-vs-kling')">Runway vs Kling AI</button>
+          <button class="compare-preset-btn" onclick="loadComparisonPreset('suno-vs-udio')">Suno vs Udio</button>
+        </div>
+
+        <div class="compare-selectors-row">
+          <div class="recommender-field">
+            <label class="recommender-label" for="compare-select-a">TOOL A</label>
+            <select id="compare-select-a" class="recommender-select" onchange="runComparison()"></select>
+          </div>
+          <div class="compare-vs-badge">VS</div>
+          <div class="recommender-field">
+            <label class="recommender-label" for="compare-select-b">TOOL B</label>
+            <select id="compare-select-b" class="recommender-select" onchange="runComparison()"></select>
+          </div>
+        </div>
+
+        <div class="compare-table-wrapper" id="compare-table-container">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       PROMPT LIBRARY
+  ═══════════════════════════════════════════ -->
+  <section class="section prompts-section" id="prompts-section" aria-labelledby="prompts-title">
+    <div class="section-inner">
+      <div class="section-label">READY-TO-USE BLUEPRINTS</div>
+      <h2 class="section-title" id="prompts-title">Role-Specific <span class="neon-text">Prompt Library</span></h2>
+      <p class="section-subtitle">Tested, production-grade prompts categorized by profession. Click to copy directly into any AI tool.</p>
+
+      <div class="prompts-filter-bar" id="prompts-filter-bar">
+        <!-- Rendered via JS: All, Students, Developers, Designers, Marketers, etc. -->
+      </div>
+
+      <div class="prompts-grid" id="prompts-grid">
+        <!-- Rendered via JS -->
       </div>
     </div>
   </section>
@@ -393,17 +486,17 @@
         </article>
 
         <!-- Post 3 -->
-        <article class="blog-card" onclick="openBlogPost('html5-gaming')">
+        <article class="blog-card" onclick="openBlogPost('ai-workflows')">
           <div class="blog-card-thumb bct-3">
-            <span class="blog-emoji">🎮</span>
+            <span class="blog-emoji">🔗</span>
           </div>
           <div class="blog-card-content">
             <div class="blog-meta">
-              <span class="blog-tag tag-gaming">Game Dev</span>
+              <span class="blog-tag tag-tech">AI Workflows</span>
               <span class="blog-read-time">6 min read</span>
             </div>
-            <h3 class="blog-card-title">HTML5 Game Development in 2026: Canvas vs WebGL</h3>
-            <p class="blog-card-excerpt">Analyzing performance tradeoffs, browser security limits, and embedding support in modern game engines like Phaser and Three.js...</p>
+            <h3 class="blog-card-title">Mastering AI Workflows: Multi-Tool Pipelines in 2026</h3>
+            <p class="blog-card-excerpt">Why single-model prompting is giving way to automated pipelines connecting research, reasoning, code, and multimedia generation...</p>
             <div class="blog-card-footer">
               <div class="blog-author">
                 <span class="author-avatar">👨‍🚀</span>
@@ -545,42 +638,19 @@
   </div>
 
   <!-- ═══════════════════════════════════════════
-       GAME PLAYER MODAL
+       PROFESSION DETAIL MODAL
   ═══════════════════════════════════════════ -->
-  <div class="modal-overlay hidden" id="game-player-modal" role="dialog" aria-modal="true" aria-labelledby="game-player-title">
-    <div class="game-player-container">
-      <div class="game-player-header">
-        <div class="game-player-info">
-          <span class="game-player-emoji" id="game-player-emoji"></span>
-          <div>
-            <h2 id="game-player-title" class="game-player-name"></h2>
-            <span id="game-player-category" class="game-player-cat"></span>
-          </div>
-        </div>
-        <div class="game-player-controls">
-          <button onclick="toggleGameFullscreen()" class="gp-control-btn" aria-label="Fullscreen" title="Fullscreen">⛶</button>
-          <button onclick="closeGamePlayer()" class="gp-control-btn gp-close-btn" aria-label="Close">✕</button>
+  <div class="modal-overlay hidden" id="profession-modal" role="dialog" aria-modal="true" aria-labelledby="prof-modal-title" onclick="closeModalIfBg(event,'profession-modal')">
+    <div class="modal profession-modal">
+      <button class="modal-close" onclick="closeModal('profession-modal')" aria-label="Close">✕</button>
+      <div class="prof-modal-header">
+        <div class="prof-modal-icon" id="prof-modal-icon"></div>
+        <div>
+          <h2 class="modal-title" id="prof-modal-title"></h2>
+          <p class="modal-sub" id="prof-modal-sub"></p>
         </div>
       </div>
-      <div class="game-player-frame-wrap" id="game-frame-wrap">
-        <iframe id="game-iframe" class="game-iframe" allowfullscreen allow="autoplay; fullscreen" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
-        <div class="game-loading" id="game-loading">
-          <div class="game-loading-spinner"></div>
-          <p>Loading game…</p>
-        </div>
-      </div>
-      <div class="game-player-footer">
-        <div class="game-rating-area">
-          <span class="rating-label">Rate this game:</span>
-          <div class="star-rating" id="game-player-rating"></div>
-        </div>
-        <div class="game-player-actions">
-          <button class="gp-action-btn" id="gp-fav-btn" onclick="toggleFavoriteFromPlayer()">
-            <span id="gp-fav-icon">♡</span> Favorite
-          </button>
-          <a href="#" target="_blank" rel="noopener noreferrer" class="gp-action-btn" id="gp-site-link">🔗 Visit Site</a>
-        </div>
-      </div>
+      <div id="prof-modal-body"></div>
     </div>
   </div>
 
@@ -599,19 +669,19 @@
       </div>
       <div class="legal-body">
         <h3>1. Information We Collect</h3>
-        <p>At ORGAN AI, we prioritize developer privacy and user transparency. We collect basic sign-up credentials (first name, last name, email) during account creation and local interactions within the system.</p>
+        <p>At ORGAN AI, we prioritize developer privacy and user transparency. We collect basic sign-up credentials (first name, last name, email) during optional account creation and local interactions within the system.</p>
         
         <h3>2. LocalStorage Caching</h3>
-        <p>We utilize the browser's <code>localStorage</code> cache to persist your interactions, such as favorited games (<code>organ_game_favs</code>), recently played logs (<code>organ_recent_games</code>), and ratings feedback (<code>organ_game_ratings</code>). This information is kept entirely client-side on your device and is not synchronized to external servers unless explicit integration is selected.</p>
+        <p>We utilize the browser's <code>localStorage</code> cache to persist your interactions, such as saved AI tool bookmarks (<code>organ_saved_tools</code>). This information is kept entirely client-side on your device and is not synchronized to external servers unless explicit cloud integration is selected.</p>
 
-        <h3>3. Third-Party Integrations &amp; Embeds</h3>
-        <p>Our platform includes iframe elements displaying browser-playable games hosted on third-party servers (e.g., itch.io, GitHub Pages, or Miniclip). These external sites may drop cookies, gather telemetry, or track user interaction according to their own privacy rules. We recommend reviewing their legal terms before playing.</p>
+        <h3>3. Third-Party AI Integrations &amp; Outbound Links</h3>
+        <p>Our platform indexes and directs users to official AI platforms and tools. These external providers operate under their own independent privacy policies and data collection terms. We recommend reviewing their legal terms before submitting sensitive personal or enterprise data to third-party models.</p>
 
         <h3>4. Email Notifications</h3>
         <p>If you create an account, we use third-party APIs (like EmailJS) to send welcome notifications and validation links. We do not sell or distribute your email addresses to advertiser networks.</p>
 
         <h3>5. Consent and Data Practices</h3>
-        <p>By utilizing the tools and services offered by ORGAN AI, you consent to our practices of data collection, sandboxed script embedding, and local caching protocols. If you do not agree with these practices, please clear your browser local storage cache and terminate further communication with our endpoints.</p>
+        <p>By utilizing the tools and discovery hubs offered by ORGAN AI, you consent to our practices of local caching and directory browsing. If you do not agree with these practices, please clear your browser local storage cache and terminate further communication with our endpoints.</p>
       </div>
     </div>
   </div>
@@ -634,38 +704,32 @@
         <p>By accessing, registering, browsing, or interacting with ORGAN AI, you signify your irrevocable agreement to be bound by these Terms of Service and all guidelines, rules, and privacy policies published herein. If you do not accept these terms in their entirety, you must immediately cease all access and utilization of our portal and associated services.</p>
 
         <h3>2. User Accounts, Eligibility &amp; Security</h3>
-        <p>To access certain customized features, tool rating pipelines, or developer portals, you may be required to establish an account via our passwordless email-based authentication system. You are entirely responsible for maintaining the confidentiality of your active session tokens. You agree to notify ORGAN AI immediately of any unauthorized access or security breaches. ORGAN AI will not be held liable for any loss or damage arising from your failure to safeguard your account parameters.</p>
+        <p>To access certain customized features, bookmark syncing, or developer portals, you may be required to establish an account via our passwordless email-based authentication system. You are entirely responsible for maintaining the confidentiality of your active session tokens. You agree to notify ORGAN AI immediately of any unauthorized access or security breaches.</p>
 
         <h3>3. Acceptable Use Policy &amp; System Integrity</h3>
         <p>You are granted a non-exclusive, non-transferable, revocable license to access the portal strictly in accordance with these terms. You agree that you will not:
           <ul>
-            <li>Engage in any automated scraping, data mining, harvesting, or bulk extraction of tool directories, game configurations, or user analytics without explicit written consent.</li>
-            <li>Use any robot, spider, bot, or other automated agent to query our assistant or API endpoints.</li>
-            <li>Inject malicious scripts, exploit vulnerabilities, execute denial-of-service (DoS) attacks, or disrupt the network connectivity of the portal or third-party game endpoints.</li>
+            <li>Engage in any automated scraping, data mining, harvesting, or bulk extraction of tool directories, profession guides, workflows, prompt libraries, or user analytics without explicit written consent.</li>
+            <li>Use any robot, spider, bot, or other automated agent to query our assistant or API endpoints aggressively.</li>
+            <li>Inject malicious scripts, exploit vulnerabilities, execute denial-of-service (DoS) attacks, or disrupt network connectivity.</li>
             <li>Circumvent or attempt to bypass any rate-limiting, regional controls, or network sandboxing configurations.</li>
           </ul>
         </p>
 
         <h3>4. Developer API &amp; Dev Token Conditions</h3>
-        <p>We provide programmatic read access to our tools index and gaming assets through our Developer API. By generating an <code>org_live_</code> authorization token, you agree to the following strict conditions:
-          <ul>
-            <li><strong>Rate Limits</strong>: API requests are limited to 60 transactions per minute. Excessive requests will trigger a <code>429 Too Many Requests</code> HTTP response and may lead to temporary or permanent token revocation.</li>
-            <li><strong>Security and Caching</strong>: You must never hardcode API keys in front-end client bundles or public repositories. You are highly encouraged to cache API responses locally to prevent redundant server round-trips.</li>
-            <li><strong>Syndication</strong>: Commercial syndication, sub-licensing, or direct reselling of the ORGAN AI database is strictly prohibited unless authorized under a custom enterprise agreement.</li>
-          </ul>
-        </p>
+        <p>We provide programmatic read access to our tools index, profession guides, and workflow pipelines through our Developer API. By generating an <code>org_live_</code> authorization token, you agree to rate limits of 60 transactions per minute and adherence to developer security best practices.</p>
 
-        <h3>5. Interactive Game Portal &amp; Embedding</h3>
-        <p>The Free Online Games section embeds public browser-playable HTML5 gaming payloads via sandboxed iframes. ORGAN AI does not host, compile, or own the core binary files for these third-party titles (except where explicitly noted). You acknowledge that interacting with these embeds runs foreign scripts on your local browser under the respective host's guidelines. We are not responsible for gameplay errors, external pop-ups, browser crashes, or hardware damage resulting from playing embedded browser games.</p>
+        <h3>5. Third-Party AI Platforms &amp; External Services</h3>
+        <p>ORGAN AI serves as an intelligence discovery hub. We do not own, operate, or host the external AI models (such as OpenAI, Anthropic, Google, Midjourney, etc.). When you click through to an external AI platform, you are governed solely by that platform's terms of service and pricing agreements.</p>
 
         <h3>6. Intellectual Property &amp; Brand Rights</h3>
-        <p>All proprietary code, custom graphic assets, brand typography, structural layouts, and CSS files compiled in this repository are the exclusive intellectual property of ORGAN AI. All third-party tool names, product logos, trade marks, and game characters displayed in our catalogs are the sole property of their respective creators and owners. Displaying these items does not constitute an endorsement, sponsorship, or licensing agreement by or with ORGAN AI.</p>
+        <p>All proprietary code, custom graphic assets, brand typography, structural layouts, and CSS files compiled in this repository are the exclusive intellectual property of ORGAN AI. All third-party tool names, product logos, and trade marks displayed in our catalogs are the sole property of their respective creators and owners.</p>
 
         <h3>7. User Content License &amp; Feedback</h3>
         <p>When you submit feedback, bookmarks, ratings, or critiques within our assistant or directory portal, you grant ORGAN AI a non-exclusive, royalty-free, worldwide, perpetual, and sub-licensable license to record, process, display, synthesize, and adapt these metrics for the refinement of our directories, ranking algorithms, and editorial blog reviews.</p>
 
         <h3>8. Service Modifications &amp; System Downtime</h3>
-        <p>ORGAN AI reserves the right to modify, suspend, or terminate the portal, the developer API, or any individual tool index/game embed at any time, for any reason, and without prior notification. You agree that ORGAN AI is not liable to you or any third party for any suspension, modification, or discontinuance of services.</p>
+        <p>ORGAN AI reserves the right to modify, suspend, or terminate the portal, the developer API, or any individual tool index or workflow guide at any time, for any reason, and without prior notification. You agree that ORGAN AI is not liable to you or any third party for any suspension, modification, or discontinuance of services.</p>
 
         <h3>9. Disclaimer of Warranties</h3>
         <p>THE SERVICES AND CONTENT ARE PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESSED OR IMPLIED. ORGAN AI SPECIFICALLY DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, ACCURATE, OR ERROR-FREE.</p>

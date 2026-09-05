@@ -815,6 +815,32 @@ function getSmartAnswer(q) {
     if (keys.some(k => ql.includes(k))) return ans;
   }
 
+  // ── 1.5 Profession & Workflow intelligence ──
+  if (typeof PROFESSIONS !== "undefined") {
+    for (const prof of PROFESSIONS) {
+      const profKeys = [prof.id, prof.name.toLowerCase(), prof.id.replace('-', ' ')];
+      if (profKeys.some(k => ql.includes(k))) {
+        const recTools = prof.recommendedTools.map(tid => AI_TOOLS.find(t => t.id === tid)).filter(Boolean);
+        let resp = `🎯 **Best AI Tools for ${prof.name}**:\n\n`;
+        recTools.slice(0, 4).forEach(t => {
+          resp += `• ${t.emoji} **${t.name}** — ${t.bestFor || t.description.split('—')[0].trim()} (${t.free.price})\n`;
+        });
+        resp += `\n💡 **Key Workflows**: ${prof.popularTasks.slice(0, 2).join(' · ')}\n`;
+        resp += `\nExplore the **${prof.name} Hub** in the Professions section above for ready-to-use prompts and full tool stacks! 🚀`;
+        return resp;
+      }
+    }
+  }
+
+  if (typeof WORKFLOWS !== "undefined" && (ql.includes("workflow") || ql.includes("pipeline") || ql.includes("youtube creation") || ql.includes("pitch deck"))) {
+    let resp = `🔗 **Top Multi-Tool AI Workflows**:\n\n`;
+    WORKFLOWS.slice(0, 3).forEach(wf => {
+      resp += `• **${wf.title}**: ${wf.steps.map(s => s.toolName.split('/')[0].trim()).join(' ➔ ')} (${wf.timeSaved})\n`;
+    });
+    resp += `\nExplore the **AI Workflows** section above for full step-by-step pipeline execution! 🚀`;
+    return resp;
+  }
+
   // ── 2. Dynamic tool search — find tools matching the query ──
   const matchedTools = AI_TOOLS.filter(t => {
     const searchable = [
@@ -1205,7 +1231,7 @@ function closeModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add("hidden");
   // Only restore overflow if no other modal is open
-  const anyOpen = ["signin-modal", "signup-modal", "tool-modal", "privacy-modal", "terms-modal", "blog-modal", "game-player-modal", "social-modal"]
+  const anyOpen = ["signin-modal", "signup-modal", "tool-modal", "privacy-modal", "terms-modal", "blog-modal", "profession-modal", "social-modal"]
     .some(mid => { const m = document.getElementById(mid); return m && !m.classList.contains("hidden"); });
   if (!anyOpen) document.body.style.overflow = "";
 }
@@ -1218,7 +1244,7 @@ function switchModal(from, to) {
 }
 document.addEventListener("keydown", function(e) {
   if (e.key !== "Escape") return;
-  ["signin-modal", "signup-modal", "tool-modal", "privacy-modal", "terms-modal", "blog-modal", "social-modal"].forEach(closeModal);
+  ["signin-modal", "signup-modal", "tool-modal", "privacy-modal", "terms-modal", "blog-modal", "profession-modal", "social-modal"].forEach(closeModal);
 });
 
 /* ─────────────────────────────────────────────────────
@@ -1235,9 +1261,14 @@ let curFilter = "all", curSearch = "", curSort = "name";
 function getVisible() {
   let list = AI_TOOLS.filter(t => {
     const s = curSearch.toLowerCase();
-    const matchCat = curFilter === "all" || t.category === curFilter;
+    const matchCat = curFilter === "all" 
+      ? true 
+      : curFilter === "saved" 
+        ? isToolSaved(t.id) 
+        : t.category === curFilter;
     const matchSrch = !s || t.name.toLowerCase().includes(s) || t.company.toLowerCase().includes(s)
-      || t.description.toLowerCase().includes(s) || t.tags.some(g => g.toLowerCase().includes(s));
+      || t.description.toLowerCase().includes(s) || (t.tags && t.tags.some(g => g.toLowerCase().includes(s)))
+      || (t.bestFor && t.bestFor.toLowerCase().includes(s));
     return matchCat && matchSrch;
   });
   list.sort((a, b) => {
@@ -1263,9 +1294,13 @@ function buildCard(tool, idx) {
   el.setAttribute("aria-label", "View details for " + tool.name);
 
   const hasFree = tool.free.price !== "No free plan";
-  const tags = tool.tags.slice(0, 3).map(t => '<span class="tag-chip">' + t + "</span>").join("");
+  const tags = (tool.tags || []).slice(0, 3).map(t => '<span class="tag-chip">' + t + "</span>").join("");
+  const isSaved = isToolSaved(tool.id);
 
   el.innerHTML =
+    '<button class="card-bookmark-btn ' + (isSaved ? 'saved' : '') + '" data-tool-id="' + tool.id + '" aria-label="' + (isSaved ? 'Remove bookmark' : 'Bookmark tool') + '" title="' + (isSaved ? 'Saved in Bookmarks' : 'Bookmark this tool') + '">' +
+      (isSaved ? '★' : '☆') +
+    '</button>' +
     '<div class="card-top">' +
       '<div class="card-logo" aria-hidden="true">' + tool.emoji + "</div>" +
       '<div class="card-info">' +
@@ -1273,6 +1308,7 @@ function buildCard(tool, idx) {
         '<div class="card-category">' + (CAT_LABELS[tool.category] || tool.category) + "</div>" +
         '<div class="card-company">' + tool.company + "</div>" +
       "</div></div>" +
+    (tool.bestFor ? '<div style="font-size:0.75rem;color:var(--neon-cyan);margin-bottom:0.5rem;font-weight:600;">🎯 ' + tool.bestFor + '</div>' : '') +
     '<p class="card-description">' + tool.description + "</p>" +
     '<div class="plan-row">' +
       '<div class="plan-badge ' + (hasFree ? "free-badge" : "paid-badge") + '">' +
@@ -1294,7 +1330,15 @@ function buildCard(tool, idx) {
   el.addEventListener("keydown", function(e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openToolModal(tool.id); }
   });
-  // Prevent button double-fire
+  // Prevent bookmark button from opening modal
+  const bkmkBtn = el.querySelector(".card-bookmark-btn");
+  if (bkmkBtn) {
+    bkmkBtn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      toggleSaveTool(tool.id);
+    });
+  }
+  // Prevent details button double-fire
   el.querySelector(".card-btn").addEventListener("click", function(e) {
     e.stopPropagation();
     openToolModal(tool.id);
@@ -1332,6 +1376,7 @@ function openToolModal(id) {
   const t = AI_TOOLS.find(x => x.id === id);
   if (!t) return;
   const hasFree = t.free.price !== "No free plan";
+  const isSaved = isToolSaved(t.id);
 
   document.getElementById("tool-modal-logo").textContent  = t.emoji;
   document.getElementById("tool-modal-title").textContent = t.name;
@@ -1340,7 +1385,34 @@ function openToolModal(id) {
   const freeF = t.free.features.map(f => '<li><span class="fi">✅</span>' + f + "</li>").join("");
   const paidF = t.paid.features.map(f => '<li><span class="fi">💎</span>' + f + "</li>").join("");
 
+  // Pros & Cons
+  let prosConsHtml = '';
+  if (t.pros && t.cons) {
+    prosConsHtml =
+      '<div class="modal-section-title">⚖️ Pros &amp; Cons</div>' +
+      '<div class="modal-pros-cons-grid">' +
+        '<div class="pros-box"><h4>Key Strengths</h4><ul class="pros-cons-list">' +
+          t.pros.map(p => '<li>+ ' + p + '</li>').join('') +
+        '</ul></div>' +
+        '<div class="cons-box"><h4>Limitations</h4><ul class="pros-cons-list">' +
+          t.cons.map(c => '<li>− ' + c + '</li>').join('') +
+        '</ul></div>' +
+      '</div>';
+  }
+
+  // Similar AI Tools
+  const similarTools = AI_TOOLS.filter(x => x.id !== t.id && (x.category === t.category || (x.tags && t.tags && x.tags.some(tg => t.tags.includes(tg))))).slice(0, 4);
+  let similarHtml = '';
+  if (similarTools.length > 0) {
+    similarHtml =
+      '<div class="modal-section-title">🔄 Similar AI Tools &amp; Alternatives</div>' +
+      '<div class="similar-tools-row">' +
+        similarTools.map(st => '<button class="similar-tool-chip" onclick="openToolModal(\'' + st.id + '\')">' + st.emoji + ' ' + st.name + '</button>').join('') +
+      '</div>';
+  }
+
   document.getElementById("tool-modal-body").innerHTML =
+    (t.bestFor ? '<div style="display:inline-flex;align-items:center;gap:0.4rem;padding:4px 12px;border-radius:99px;background:rgba(0,245,212,0.1);border:1px solid rgba(0,245,212,0.3);color:var(--neon-cyan);font-size:0.75rem;font-weight:700;margin-bottom:1rem;">🎯 Best for: ' + t.bestFor + ' · Ease: ' + (t.easeOfUse || 'Beginner') + '</div>' : '') +
     '<p style="font-size:.88rem;color:var(--white-60);line-height:1.65;margin-bottom:1.5rem;">' + t.description + "</p>" +
     '<div class="modal-plan-card ' + (hasFree ? "free-card" : "paid-card") + '">' +
       '<div class="modal-plan-header">' +
@@ -1355,12 +1427,19 @@ function openToolModal(id) {
         '<span class="modal-plan-price">' + t.paid.price + "</span>" +
       "</div>" +
       '<ul class="feature-list">' + paidF + "</ul>" +
-    "</div>";
+    "</div>" +
+    prosConsHtml +
+    similarHtml;
 
   document.getElementById("tool-modal-footer").innerHTML =
-    '<a href="' + t.url + '" target="_blank" rel="noopener noreferrer" class="modal-visit-btn" id="visit-' + t.id + '">' +
-      "🌐 Visit " + t.name + " Official Website →" +
-    "</a>";
+    '<div style="display:flex;gap:0.75rem;width:100%;align-items:center;">' +
+      '<button class="btn-ghost" onclick="toggleSaveTool(\'' + t.id + '\');openToolModal(\'' + t.id + '\')" style="white-space:nowrap;padding:12px 18px;">' +
+        (isSaved ? '★ Bookmarked' : '☆ Bookmark') +
+      '</button>' +
+      '<a href="' + t.url + '" target="_blank" rel="noopener noreferrer" class="modal-visit-btn" id="visit-' + t.id + '" style="flex:1;">' +
+        "🌐 Visit " + t.name + " Official Website →" +
+      "</a>" +
+    '</div>';
 
   openModal("tool-modal");
 }
@@ -1454,522 +1533,1492 @@ if (statsEl && "IntersectionObserver" in window) {
 }
 
 /* ─────────────────────────────────────────────────────
-   10. FREE ONLINE GAMES
+   10. ORGAN AI DISCOVERY HUB ENGINES
    ───────────────────────────────────────────────────── */
 
-const GAME_CATEGORIES = {
-  action:      { label: "Action",      emoji: "\uD83D\uDCA5", color: "#ff4444" },
-  racing:      { label: "Racing",      emoji: "\uD83C\uDFCE\uFE0F", color: "#ff8800" },
-  puzzle:      { label: "Puzzle",      emoji: "\uD83E\uDDE9", color: "#aa44ff" },
-  adventure:   { label: "Adventure",   emoji: "\uD83D\uDDFA\uFE0F", color: "#44bb44" },
-  multiplayer: { label: "Multiplayer", emoji: "\uD83D\uDC65", color: "#4488ff" },
-  strategy:    { label: "Strategy",    emoji: "\u265F\uFE0F", color: "#ffaa00" },
-  sports:      { label: "Sports",      emoji: "\u26BD",       color: "#44ddaa" },
-  arcade:      { label: "Arcade",      emoji: "\uD83D\uDC7E", color: "#ff44aa" }
+/* ── 10.1 BOOKMARK / SAVED TOOLS SYSTEM ── */
+const STORAGE_KEY_SAVED = "organ_saved_tools";
+
+function getSavedTools() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SAVED);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function isToolSaved(toolId) {
+  return getSavedTools().includes(toolId);
+}
+
+function toggleSaveTool(toolId) {
+  const saved = getSavedTools();
+  const idx = saved.indexOf(toolId);
+  const tool = AI_TOOLS.find(t => t.id === toolId);
+  const toolName = tool ? tool.name : "Tool";
+
+  if (idx >= 0) {
+    saved.splice(idx, 1);
+    showToast("☆", `${toolName} removed from Bookmarks`);
+  } else {
+    saved.push(toolId);
+    showToast("★", `${toolName} saved to Bookmarks!`);
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY_SAVED, JSON.stringify(saved));
+  } catch (e) {
+    console.warn("Could not save to localStorage:", e);
+  }
+
+  updateSavedCountBadge();
+  // Refresh visible cards without disrupting scroll
+  document.querySelectorAll(`.card-bookmark-btn[data-tool-id="${toolId}"]`).forEach(btn => {
+    const nowSaved = isToolSaved(toolId);
+    btn.classList.toggle("saved", nowSaved);
+    btn.textContent = nowSaved ? "★" : "☆";
+    btn.setAttribute("title", nowSaved ? "Saved in Bookmarks" : "Bookmark this tool");
+  });
+
+  if (curFilter === "saved") {
+    render();
+  }
+}
+
+function updateSavedCountBadge() {
+  const count = getSavedTools().length;
+  const badge = document.getElementById("saved-count");
+  if (badge) badge.textContent = count;
+}
+
+function initBookmarks() {
+  updateSavedCountBadge();
+}
+
+/* ── 10.2 TOOL ENRICHMENTS & METADATA ── */
+const TOOL_ENRICHMENTS = {
+  "chatgpt": {
+    bestFor: "General reasoning, multi-disciplinary writing, and custom GPT workflows",
+    professions: ["students", "teachers", "writers", "developers", "business", "marketers", "sales", "freelancers", "hr", "admin"],
+    tasks: ["Drafting essays & reports", "Debugging & writing code", "Brainstorming business ideas", "Drafting cold emails"],
+    pros: ["Versatile multi-modal reasoning (GPT-4o)", "Extensive custom GPT ecosystem", "Fast voice mode and web browsing"],
+    cons: ["Can hallucinate on niche technical facts", "Free tier rate-limited during peak hours"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-01-10"
+  },
+  "claude": {
+    bestFor: "Nuanced long-form writing, document analysis, and coding architecture",
+    professions: ["writers", "researchers", "lawyers", "developers", "business", "students", "teachers", "healthcare", "project-managers"],
+    tasks: ["Reviewing 200-page contracts & papers", "Writing nuanced articles & prose", "Refactoring complex codebases", "Synthesizing research"],
+    pros: ["Massive 200K token context window", "Artifacts feature for interactive previews", "Superior nuanced and natural prose"],
+    cons: ["No real-time web browsing in base chat", "Message limits on peak hours for free users"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-01-12"
+  },
+  "cursor": {
+    bestFor: "Agentic software engineering, multi-file code editing, and repository understanding",
+    professions: ["developers", "engineers", "freelancers"],
+    tasks: ["Full codebase semantic indexing", "Multi-file automated refactoring", "Writing unit tests & documentation", "Terminal command generation"],
+    pros: ["Native VS Code fork with seamless extension support", "Composer multi-file autonomous agent", "Context-aware inline tab completions"],
+    cons: ["Requires high compute / monthly subscription for heavy pro models", "Occasional sync lag on massive monorepos"],
+    easeOfUse: "Intermediate",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-02-01"
+  },
+  "github-copilot": {
+    bestFor: "Inline code completions, pull request summaries, and team developer productivity",
+    professions: ["developers", "engineers", "students"],
+    tasks: ["Autocomplete function definitions", "Generate test suites", "Review pull requests", "Command-line CLI explanations"],
+    pros: ["Deep GitHub and IDE integration", "Fast autocomplete latency", "Enterprise-grade compliance and IP indemnity"],
+    cons: ["Less autonomous than full agentic IDEs", "No permanent free plan for individuals"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Paid",
+    isFeatured: true,
+    dateAdded: "2026-01-05"
+  },
+  "midjourney": {
+    bestFor: "Photorealistic concept art, cinematic imagery, and high-end marketing visuals",
+    professions: ["designers", "creators", "marketers", "architects", "writers"],
+    tasks: ["Generating photorealistic stock photos", "Creating cinematic storyboards", "Designing 3D architectural concepts", "Crafting YouTube thumbnails"],
+    pros: ["Industry-leading aesthetic lighting and photorealism", "Powerful style references and character consistency", "Active community showcasing styles"],
+    cons: ["Discord-based interface (web app has subscription tier gating)", "No permanent free trial"],
+    easeOfUse: "Intermediate",
+    pricingCategory: "Paid",
+    isFeatured: true,
+    dateAdded: "2026-01-15"
+  },
+  "flux": {
+    bestFor: "State-of-the-art open-source image generation and typography accuracy",
+    professions: ["designers", "creators", "marketers", "developers"],
+    tasks: ["Accurate in-image text rendering", "Open-weight local image synthesis", "High-detail commercial graphic generation", "Creative branding mockups"],
+    pros: ["Exceptional prompt adherence and spelled text rendering", "Open weights available for local execution", "Very natural human anatomy and hands"],
+    cons: ["Requires powerful local GPU (16GB+ VRAM) or cloud API fees", "Higher inference latency than Turbo models"],
+    easeOfUse: "Intermediate",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-02-10"
+  },
+  "elevenlabs": {
+    bestFor: "Hyper-realistic voice cloning, emotionally expressive voiceovers, and audio localization",
+    professions: ["creators", "marketers", "teachers", "customer-support", "writers"],
+    tasks: ["Narrating YouTube video scripts", "Cloning brand voices for commercials", "Creating foreign language dubbing", "Interactive voice response (IVR) bots"],
+    pros: ["Unmatched emotional pacing and vocal realism", "Instant voice cloning from 1 minute of audio", "29+ fluent languages with accent preservation"],
+    cons: ["Character counts can get expensive for full audiobooks", "Audio latency for real-time live phone calls"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-01-20"
+  },
+  "runway": {
+    bestFor: "Cinematic AI video generation, camera motion control, and professional VFX editing",
+    professions: ["creators", "marketers", "designers", "architects"],
+    tasks: ["Generating 10-second cinematic b-roll", "Animating still concept art photos", "Custom camera motion pans and zooms", "Motion brush video modifications"],
+    pros: ["Gen-3 Alpha photorealistic video synthesis", "Precise camera trajectory controls", "Full creative video editing suite"],
+    cons: ["High compute credit consumption per generation", "Occasional temporal warping on rapid physics"],
+    easeOfUse: "Intermediate",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-02-15"
+  },
+  "kling": {
+    bestFor: "High-frame-rate realistic human motion and extended AI video generation",
+    professions: ["creators", "marketers", "designers"],
+    tasks: ["High-framerate action video synthesis", "Realistic human movement & dance", "1080p full HD video clips", "Text-to-video conceptualization"],
+    pros: ["Generates up to 2-minute video clips", "Accurate real-world physics simulation", "Generous daily free credits"],
+    cons: ["Queue times can be slow on free tier", "Occasional server capacity alerts"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-03-01"
+  },
+  "perplexity": {
+    bestFor: "Real-time research with inline citations, academic deep search, and source verification",
+    professions: ["researchers", "students", "lawyers", "journalists", "writers", "healthcare", "business"],
+    tasks: ["Finding peer-reviewed study citations", "Competitive market intelligence", "Summarizing breaking news stories", "Fact-checking complex claims"],
+    pros: ["Direct clickable source URLs for every claim", "Pro search mode executes multi-step queries", "Selectable models (Claude 3.5, Sonar, GPT-4o)"],
+    cons: ["Occasionally summarizes outdated sources if SEO spam is high", "Limited Pro queries per day on free plan"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-01-08"
+  },
+  "notion-ai": {
+    bestFor: "Connected workspace knowledge, meeting action items, and project documentation",
+    professions: ["project-managers", "business", "marketers", "hr", "admin", "freelancers", "writers"],
+    tasks: ["Extracting action items from meeting notes", "Writing project requirement documents (PRD)", "Searching entire company knowledge base", "Drafting sprint updates"],
+    pros: ["Deeply embedded where teams already write documents", "Q&A over entire connected company workspace", "Clean markdown table and summary generation"],
+    cons: ["Requires existing Notion workspace adoption", "Separate add-on subscription fee ($10/user/mo)"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-01-18"
+  },
+  "v0": {
+    bestFor: "Instant generative UI creation, React component design, and Tailwind CSS code",
+    professions: ["developers", "designers", "freelancers", "business"],
+    tasks: ["Generating modern dashboard layouts", "Building responsive navigation & hero sections", "Exporting clean React + Lucide code", "Iterative UI styling with visual preview"],
+    pros: ["Generates clean, production-ready React / shadcn code", "Interactive live preview in browser", "1-click copy or npm CLI install"],
+    cons: ["Limited to frontend React/Tailwind ecosystem", "Complex interactive state machines need manual tweaking"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-02-20"
+  },
+  "suno": {
+    bestFor: "Complete song generation with vocals, instruments, lyrics, and genre mastering",
+    professions: ["creators", "marketers", "freelancers"],
+    tasks: ["Generating royalty-free background songs", "Creating custom jingles and podcast intros", "Experimenting with song lyrics & melodies", "Producing multi-genre instrumental tracks"],
+    pros: ["Full 2-4 minute song generation with cohesive verses & choruses", "Natural human vocal timbre across dozens of genres", "Generous daily free tier (50 credits = 10 songs)"],
+    cons: ["Vocal stems separation requires pro plan", "Commercial rights restricted on free plan"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-01-25"
+  },
+  "descript": {
+    bestFor: "Text-based video and podcast editing, filler word removal, and dynamic captions",
+    professions: ["creators", "teachers", "marketers", "customer-support"],
+    tasks: ["Edit video by editing transcript text", "1-click removal of 'um' and 'uh' filler words", "Generate kinetic animated captions", "Studio Sound background noise removal"],
+    pros: ["Revolutionary transcript-driven timeline editing", "Studio Sound transforms smartphone audio to podcast quality", "Automatic multi-speaker detection and subtitles"],
+    cons: ["Desktop app can be resource-intensive on long 4K videos", "Export limits on free tier"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-02-05"
+  },
+  "grammarly": {
+    bestFor: "Professional grammar refinement, tone adjustment, and business communication polish",
+    professions: ["writers", "students", "teachers", "marketers", "sales", "hr", "admin", "lawyers"],
+    tasks: ["Fixing grammatical syntax and conciseness", "Adjusting email tone (formal, friendly, urgent)", "Rewriting sentences for clarity", "Detecting plagiarism"],
+    pros: ["Works everywhere via Chrome extension & desktop", "Real-time inline feedback while typing", "Reliable tone detection"],
+    cons: ["Premium tier required for advanced structural rewrites", "Can occasionally over-sanitize creative writing voice"],
+    easeOfUse: "Beginner",
+    pricingCategory: "Freemium",
+    isFeatured: true,
+    dateAdded: "2026-01-02"
+  },
+  "deepseek": {
+    bestFor: "Open-weights reasoning, cost-effective API code generation, and complex math proofs",
+    professions: ["developers", "engineers", "researchers", "students"],
+    tasks: ["R1 chain-of-thought deep reasoning", "High-complexity algorithmic coding", "Low-cost high-volume batch processing", "Local model self-hosting"],
+    pros: ["State-of-the-art reasoning at a fraction of closed-API costs", "Open-source model weights freely downloadable", "Strong mathematical and competitive coding capabilities"],
+    cons: ["Web interface subject to peak traffic load", "Smaller context window compared to Claude's 200K"],
+    easeOfUse: "Intermediate",
+    pricingCategory: "Free",
+    isFeatured: true,
+    dateAdded: "2026-02-12"
+  }
 };
 
-const BROWSER_GAMES = [
-  /* ── ACTION ── */
-  { id:"krunker",      name:"Krunker.io",        category:"action",     emoji:"\uD83D\uDD2B",  description:"Fast-paced pixel-art FPS with classes, custom maps, and competitive ranked modes.",              playUrl:"https://krunker.io",                                  embedUrl:null,                          tags:["FPS","Competitive","Pixel"],         defaultRating:4.5, isFeatured:true,  isTrending:true,  isNew:false },
-  { id:"shellshock",   name:"Shell Shockers",     category:"action",     emoji:"\uD83E\uDD5A",  description:"Egg-themed multiplayer FPS — crack your opponents in this hilarious online shooter.",             playUrl:"https://shellshock.io",                               embedUrl:null,                       tags:["FPS","Funny","Multiplayer"],         defaultRating:4.3, isFeatured:false, isTrending:true,  isNew:false },
-  { id:"1v1lol",       name:"1v1.LOL",            category:"action",     emoji:"\uD83C\uDFD7\uFE0F", description:"Build and shoot in this fast-paced 1v1 battle game with Fortnite-style building mechanics.",    playUrl:"https://1v1.lol",                                     embedUrl:null,                             tags:["Building","Shooting","1v1"],         defaultRating:4.4, isFeatured:true,  isTrending:false, isNew:false },
-  { id:"evio",         name:"Ev.io",              category:"action",     emoji:"\u26A1",         description:"Sci-fi arena shooter with hoverboards, portals, and fast-paced multiplayer combat.",              playUrl:"https://ev.io",                                       embedUrl:null,                               tags:["Sci-Fi","Arena","Fast"],             defaultRating:4.2, isFeatured:false, isTrending:false, isNew:true  },
-  { id:"zombsroyale",  name:"Zombs Royale",       category:"action",     emoji:"\uD83D\uDC80",  description:"2D battle royale — loot, build, and be the last one standing in 100-player matches.",             playUrl:"https://zombsroyale.io",                              embedUrl:null,                      tags:["Battle Royale","2D","100 Players"], defaultRating:4.1, isFeatured:false, isTrending:true,  isNew:false },
-  { id:"bulletforce",  name:"Bullet Force",       category:"action",     emoji:"\uD83D\uDCA3",  description:"Realistic multiplayer FPS with custom loadouts, multiple maps, and team deathmatch modes.",       playUrl:"https://www.crazygames.com/game/bullet-force-multiplayer", embedUrl:null,                                       tags:["FPS","Realistic","Teams"],           defaultRating:4.0, isFeatured:false, isTrending:false, isNew:false },
+function initToolEnrichments() {
+  AI_TOOLS.forEach(t => {
+    const e = TOOL_ENRICHMENTS[t.id];
+    if (e) {
+      Object.assign(t, e);
+    } else {
+      // Intelligent defaults based on category
+      const catProfMap = {
+        code: ["developers", "engineers", "freelancers"],
+        image: ["designers", "creators", "marketers"],
+        audio: ["creators", "teachers", "marketers"],
+        video: ["creators", "marketers", "teachers"],
+        text: ["writers", "students", "business", "admin"],
+        search: ["researchers", "students", "lawyers"],
+        business: ["business", "marketers", "sales", "project-managers", "hr"],
+        multimodal: ["developers", "researchers", "creators", "students"]
+      };
+      t.bestFor = t.bestFor || `${t.company} ${t.category} intelligence platform`;
+      t.professions = t.professions || (catProfMap[t.category] || ["freelancers", "students"]);
+      t.tasks = t.tasks || [`General ${t.category} processing`, "Workflow automation"];
+      t.pros = t.pros || ["High reliability", "Modern intuitive interface", "Regular model updates"];
+      t.cons = t.cons || ["Usage limits on free tier", "Requires network connection"];
+      t.easeOfUse = t.easeOfUse || "Beginner";
+      t.pricingCategory = t.free.price === "No free plan" ? "Paid" : "Freemium";
+      t.isFeatured = t.isFeatured || false;
+      t.dateAdded = t.dateAdded || "2026-01-01";
+    }
+  });
+}
 
-  /* ── RACING ── */
-  { id:"motox3m",      name:"Moto X3M",           category:"racing",     emoji:"\uD83C\uDFCD\uFE0F", description:"Extreme motorcycle stunts — race through obstacle courses with flips, explosions, and speed.", playUrl:"https://www.crazygames.com/game/moto-x3m",            embedUrl:null,                                          tags:["Stunts","Motorcycle","Levels"],     defaultRating:4.6, isFeatured:true,  isTrending:true,  isNew:false },
-  { id:"drifthunters", name:"Drift Hunters",      category:"racing",     emoji:"\uD83D\uDE97",  description:"3D drift racing with realistic physics, 25+ cars to tune, and multiple tracks to master.",       playUrl:"https://www.crazygames.com/game/drift-hunters",       embedUrl:null,                                          tags:["Drifting","3D","Tuning"],            defaultRating:4.4, isFeatured:false, isTrending:true,  isNew:false },
-  { id:"smashkarts",   name:"SmashKarts.io",      category:"racing",     emoji:"\uD83D\uDE80",  description:"Multiplayer kart battle game — collect power-ups and smash opponents in chaotic arena races.",    playUrl:"https://smashkarts.io",                               embedUrl:null,                       tags:["Kart","Power-ups","Arena"],          defaultRating:4.3, isFeatured:false, isTrending:false, isNew:false },
-  { id:"driftboss",    name:"Drift Boss",         category:"racing",     emoji:"\uD83C\uDFC1",  description:"One-button drift game — time your taps perfectly to drift around an endless curvy road.",         playUrl:"https://www.crazygames.com/game/drift-boss",          embedUrl:null,                                          tags:["Endless","One-Button","Casual"],    defaultRating:4.0, isFeatured:false, isTrending:false, isNew:true  },
-  { id:"racingmaster", name:"City Car Driving",   category:"racing",     emoji:"\uD83C\uDF06",  description:"Realistic city driving simulator — navigate traffic, follow rules, and explore the open city.",   playUrl:"https://www.crazygames.com/game/city-car-driving-simulator", embedUrl:null,                                   tags:["Simulator","City","Realistic"],     defaultRating:3.9, isFeatured:false, isTrending:false, isNew:false },
+/* ── 10.3 TOOL OF THE DAY (SPOTLIGHT) ── */
+function renderToolOfDay() {
+  const container = document.getElementById("tool-of-the-day-container");
+  if (!container) return;
 
-  /* ── PUZZLE ── */
-  { id:"2048",         name:"2048",               category:"puzzle",     emoji:"\uD83D\uDD22",  description:"Slide tiles to combine matching numbers — reach the 2048 tile in this addictive math puzzle.",    playUrl:"https://play2048.co",                                 embedUrl:null,                         tags:["Number","Addictive","Classic"],     defaultRating:4.7, isFeatured:true,  isTrending:true,  isNew:false },
-  { id:"wordle",       name:"Wordle",             category:"puzzle",     emoji:"\uD83D\uDFE9",  description:"Guess the 5-letter word in 6 tries — the viral daily word puzzle that took the world by storm.",  playUrl:"https://www.nytimes.com/games/wordle",                embedUrl:null,                                          tags:["Word","Daily","Viral"],              defaultRating:4.8, isFeatured:true,  isTrending:false, isNew:false },
-  { id:"sudoku",       name:"Sudoku Online",      category:"puzzle",     emoji:"\uD83E\uDDE0",  description:"Classic number puzzle with multiple difficulty levels — fill the 9x9 grid with logic.",          playUrl:"https://sudoku.com",                                  embedUrl:null,                                          tags:["Logic","Numbers","Classic"],         defaultRating:4.5, isFeatured:false, isTrending:false, isNew:false },
-  { id:"mahjong",      name:"Mahjong Solitaire",  category:"puzzle",     emoji:"\uD83C\uDC04",  description:"Classic tile-matching game — clear matching pairs of tiles from the board before time runs out.", playUrl:"https://www.crazygames.com/game/mahjong-solitaire",   embedUrl:null,                                          tags:["Tiles","Matching","Relaxing"],      defaultRating:4.2, isFeatured:false, isTrending:false, isNew:false },
-  { id:"crossword",    name:"Daily Crossword",    category:"puzzle",     emoji:"\u270D\uFE0F",  description:"Solve a new crossword puzzle every day — test your vocabulary and general knowledge.",            playUrl:"https://www.crazygames.com/game/daily-crossword",     embedUrl:null,                                          tags:["Words","Daily","Knowledge"],        defaultRating:4.3, isFeatured:false, isTrending:false, isNew:true  },
-  { id:"blockpuzzle",  name:"Block Puzzle",       category:"puzzle",     emoji:"\uD83D\uDFE6",  description:"Fit blocks into rows to clear them — a satisfying Tetris-inspired puzzle with no time limit.",    playUrl:"https://www.crazygames.com/game/block-puzzle-jewels",  embedUrl:null,                                          tags:["Blocks","Relaxing","Satisfying"],   defaultRating:4.1, isFeatured:false, isTrending:true,  isNew:false },
+  const featured = AI_TOOLS.filter(t => t.isFeatured);
+  if (!featured.length) return;
 
-  /* ── ADVENTURE ── */
-  { id:"minecraft-c",  name:"Minecraft Classic",  category:"adventure",  emoji:"\u26CF\uFE0F",  description:"The original Minecraft in your browser — build, explore, and create in this iconic sandbox.",    playUrl:"https://classic.minecraft.net",                       embedUrl:null,               tags:["Sandbox","Building","Classic"],     defaultRating:4.6, isFeatured:true,  isTrending:true,  isNew:false },
-  { id:"littlealchemy", name:"Little Alchemy 2",  category:"adventure",  emoji:"\u2728",        description:"Combine elements to discover new ones — start from basics and create an entire universe.",       playUrl:"https://littlealchemy2.com",                          embedUrl:null,                                          tags:["Discovery","Crafting","Relaxing"],  defaultRating:4.5, isFeatured:false, isTrending:false, isNew:false },
-  { id:"tombraider",   name:"Tomb of the Mask",   category:"adventure",  emoji:"\uD83C\uDFED",  description:"Retro-styled arcade adventure — navigate mazes, avoid traps, and collect dots at high speed.",   playUrl:"https://www.crazygames.com/game/tomb-of-the-mask",    embedUrl:null,                                          tags:["Retro","Maze","Speed"],             defaultRating:4.2, isFeatured:false, isTrending:false, isNew:true  },
-  { id:"bobrobber",    name:"Bob the Robber",     category:"adventure",  emoji:"\uD83E\uDD77",  description:"Stealth puzzle adventure — sneak past guards, disable cameras, and steal the treasure.",         playUrl:"https://www.crazygames.com/game/bob-the-robber",      embedUrl:null,                                          tags:["Stealth","Puzzle","Story"],         defaultRating:4.1, isFeatured:false, isTrending:false, isNew:false },
-  { id:"firewater",    name:"Fireboy & Watergirl",category:"adventure",  emoji:"\uD83D\uDD25",  description:"Two-player puzzle platformer — guide Fireboy and Watergirl through elemental temple puzzles.",   playUrl:"https://www.crazygames.com/game/fireboy-and-watergirl-1", embedUrl:null,                                       tags:["Co-op","Puzzle","Elements"],        defaultRating:4.4, isFeatured:false, isTrending:true,  isNew:false },
+  // Deterministic tool based on day of year
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = now - start;
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const tool = featured[dayOfYear % featured.length];
 
-  /* ── MULTIPLAYER ── */
-  { id:"slither",      name:"Slither.io",         category:"multiplayer",emoji:"\uD83D\uDC0D",  description:"Grow your snake by eating orbs — outmaneuver opponents in this massively multiplayer .io game.", playUrl:"https://slither.io",                                  embedUrl:null,                          tags:[".io","Snake","Competitive"],         defaultRating:4.4, isFeatured:true,  isTrending:true,  isNew:false },
-  { id:"agar",         name:"Agar.io",            category:"multiplayer",emoji:"\uD83E\uDDA0",  description:"Start as a tiny cell and grow by eating others — the original .io game phenomenon.",              playUrl:"https://agar.io",                                    embedUrl:null,                             tags:[".io","Cell","Absorb"],               defaultRating:4.2, isFeatured:false, isTrending:false, isNew:false },
-  { id:"skribbl",      name:"Skribbl.io",         category:"multiplayer",emoji:"\uD83C\uDFA8",  description:"Online Pictionary — one player draws while others guess the word in this party favorite.",       playUrl:"https://skribbl.io",                                  embedUrl:null,                                          tags:["Drawing","Guessing","Party"],       defaultRating:4.5, isFeatured:false, isTrending:true,  isNew:false },
-  { id:"gartic",       name:"Gartic.io",          category:"multiplayer",emoji:"\u270F\uFE0F",  description:"Draw and guess with friends in real-time — like Skribbl with more game modes and themes.",       playUrl:"https://gartic.io",                                   embedUrl:null,                                          tags:["Drawing","Party","Social"],         defaultRating:4.3, isFeatured:false, isTrending:false, isNew:false },
-  { id:"paperio",      name:"Paper.io 2",         category:"multiplayer",emoji:"\uD83D\uDCDD",  description:"Claim territory by drawing shapes — but watch out, other players can cut you off!",              playUrl:"https://paper-io.com",                                embedUrl:null,                                          tags:["Territory","Competitive","Simple"], defaultRating:4.1, isFeatured:false, isTrending:false, isNew:false },
-  { id:"diep",         name:"Diep.io",            category:"multiplayer",emoji:"\uD83D\uDD35",  description:"Tank battle .io game — shoot shapes, level up, upgrade your tank, and dominate the arena.",      playUrl:"https://diep.io",                                    embedUrl:null,                             tags:[".io","Tanks","Upgrades"],            defaultRating:4.2, isFeatured:false, isTrending:false, isNew:false },
+  const hasFree = tool.free.price !== "No free plan";
+  const tagsHtml = (tool.tags || []).slice(0, 4).map(tg => `<span class="tag-chip">${tg}</span>`).join("");
 
-  /* ── STRATEGY ── */
-  { id:"chess",        name:"Chess",              category:"strategy",   emoji:"\u265A",         description:"Play chess online against players worldwide or practice against AI with multiple difficulty levels.", playUrl:"https://www.chess.com/play/online",               embedUrl:null,                                          tags:["Classic","PvP","Ranked"],            defaultRating:4.8, isFeatured:true,  isTrending:true,  isNew:false },
-  { id:"bloonsTD",     name:"Bloons TD",          category:"strategy",   emoji:"\uD83C\uDF88",  description:"Pop waves of bloons by placing monkey towers — the beloved tower defense franchise.",             playUrl:"https://www.crazygames.com/game/bloons-tower-defense", embedUrl:null,                                          tags:["Tower Defense","Monkeys","Waves"],  defaultRating:4.5, isFeatured:false, isTrending:true,  isNew:false },
-  { id:"territorial",  name:"Territorial.io",     category:"strategy",   emoji:"\uD83C\uDF0D",  description:"Conquer the world map by expanding your territory — a Risk-inspired multiplayer strategy game.", playUrl:"https://territorial.io",                              embedUrl:null,                      tags:["Conquest","Maps","Multiplayer"],    defaultRating:4.3, isFeatured:false, isTrending:false, isNew:false },
-  { id:"kingdomrush",  name:"Kingdom Rush",       category:"strategy",   emoji:"\uD83C\uDFF0",  description:"Epic fantasy tower defense — place towers, recruit heroes, and defend your kingdom from evil.",  playUrl:"https://www.crazygames.com/game/kingdom-rush",        embedUrl:null,                                          tags:["Tower Defense","Fantasy","Heroes"], defaultRating:4.6, isFeatured:false, isTrending:false, isNew:false },
-  { id:"checkers",     name:"Checkers Online",    category:"strategy",   emoji:"\u26AA",        description:"Classic checkers — play against friends or AI with simple rules and deep strategic gameplay.",    playUrl:"https://www.crazygames.com/game/checkers-legend",     embedUrl:null,                                          tags:["Classic","Board","PvP"],             defaultRating:4.0, isFeatured:false, isTrending:false, isNew:true  },
+  container.innerHTML = `
+    <div class="tool-of-day-card">
+      <div class="tod-logo" aria-hidden="true">${tool.emoji}</div>
+      <div class="tod-info">
+        <div class="tod-badge">⭐ AI TOOL OF THE DAY</div>
+        <h3>${tool.name} <span class="tod-company">by ${tool.company}</span></h3>
+        <p class="tod-desc">${tool.description}</p>
+        <div style="font-size:0.82rem;color:var(--neon-cyan);margin-bottom:0.75rem;font-weight:600;">
+          🎯 ${tool.bestFor || 'Top-rated tool'}
+        </div>
+        <div class="tod-tags">${tagsHtml}</div>
+      </div>
+      <div class="tod-cta">
+        <div class="tod-price-pill">${hasFree ? '✅ ' + tool.free.price : '💳 ' + tool.paid.price}</div>
+        <button class="btn-neon" onclick="openToolModal('${tool.id}')" style="white-space:nowrap;padding:10px 22px;">
+          View Deep Dive →
+        </button>
+        <a href="${tool.url}" target="_blank" rel="noopener noreferrer" class="btn-ghost" style="font-size:0.78rem;padding:6px 14px;white-space:nowrap;">
+          Launch Tool ↗
+        </a>
+      </div>
+    </div>
+  `;
+}
 
-  /* ── SPORTS ── */
-  { id:"basketball",   name:"Basketball Stars",   category:"sports",     emoji:"\uD83C\uDFC0",  description:"1v1 basketball — dribble, shoot, and dunk your way to victory in this addictive sports game.",   playUrl:"https://www.crazygames.com/game/basketball-stars",    embedUrl:null,                                          tags:["Basketball","1v1","Skills"],        defaultRating:4.3, isFeatured:false, isTrending:true,  isNew:false },
-  { id:"8ball",        name:"8 Ball Pool",        category:"sports",     emoji:"\uD83C\uDFB1",  description:"The world's #1 pool game — play PvP matches, aim precisely, and win tournaments.",               playUrl:"https://www.miniclip.com/games/8-ball-pool",          embedUrl:null,                                          tags:["Pool","1v1","Tournaments"],         defaultRating:4.5, isFeatured:true,  isTrending:false, isNew:false },
-  { id:"penalty",      name:"Penalty Shooters 2", category:"sports",     emoji:"\u26BD",        description:"Score penalty kicks and save shots as goalkeeper — choose your team and win the cup!",            playUrl:"https://www.crazygames.com/game/penalty-shooters-2",  embedUrl:null,                                          tags:["Football","Penalties","Tournament"],defaultRating:4.1, isFeatured:false, isTrending:false, isNew:false },
-  { id:"tabletennis",  name:"Table Tennis World", category:"sports",     emoji:"\uD83C\uDFD3",  description:"Fast-paced ping pong — react quickly and place your shots to defeat opponents worldwide.",       playUrl:"https://www.crazygames.com/game/table-tennis-world-tour", embedUrl:null,                                       tags:["Ping Pong","Reflexes","PvP"],      defaultRating:4.0, isFeatured:false, isTrending:false, isNew:true  },
-  { id:"minigolf",     name:"Mini Golf Club",     category:"sports",     emoji:"\u26F3",        description:"Charming mini golf with creative courses — putt through obstacles and aim for hole-in-one!",     playUrl:"https://www.crazygames.com/game/mini-golf-club",      embedUrl:null,                                          tags:["Golf","Relaxing","Levels"],         defaultRating:4.2, isFeatured:false, isTrending:false, isNew:false },
-
-  /* ── ARCADE ── */
-  { id:"pacman",       name:"Pac-Man",            category:"arcade",     emoji:"\uD83D\uDFE1",  description:"The legendary arcade classic — eat dots, avoid ghosts, and clear the maze to set high scores.",  playUrl:"https://macek.github.io/google_pacman/",   embedUrl:"https://macek.github.io/google_pacman/", tags:["Classic","Maze","Retro"],      defaultRating:4.7, isFeatured:true,  isTrending:false, isNew:false },
-  { id:"tetris",       name:"Tetris",             category:"arcade",     emoji:"\uD83D\uDFE8",  description:"The timeless block puzzle — rotate and stack falling tetrominoes to clear lines.",               playUrl:"https://tetris.com/play-tetris",                      embedUrl:null,                                          tags:["Blocks","Classic","Endless"],       defaultRating:4.8, isFeatured:true,  isTrending:true,  isNew:false },
-  { id:"snake",        name:"Snake",              category:"arcade",     emoji:"\uD83D\uDC0D",  description:"Classic snake game — eat food, grow longer, and avoid hitting yourself or the walls.",            playUrl:"https://www.google.com/fbx?fbx=snake_arcade",        embedUrl:null,                                          tags:["Classic","Growing","Simple"],       defaultRating:4.4, isFeatured:false, isTrending:true,  isNew:false },
-  { id:"flappy",       name:"Flappy Bird",        category:"arcade",     emoji:"\uD83D\uDC26",  description:"Tap to fly between pipes — the infamously addictive game that took the world by storm.",         playUrl:"https://flappybird.io",                               embedUrl:null,                                          tags:["One-Tap","Addictive","Viral"],      defaultRating:4.3, isFeatured:false, isTrending:false, isNew:false },
-  { id:"doodlejump",   name:"Doodle Jump",        category:"arcade",     emoji:"\uD83D\uDC3E",  description:"Jump endlessly upward on platforms — tilt and tap to avoid monsters and reach new heights.",     playUrl:"https://www.crazygames.com/game/doodle-jump",         embedUrl:null,                                          tags:["Jumping","Endless","Classic"],      defaultRating:4.1, isFeatured:false, isTrending:false, isNew:false },
-  { id:"fruitninja",   name:"Fruit Ninja",        category:"arcade",     emoji:"\uD83C\uDF49",  description:"Slice flying fruits with your finger — avoid bombs and rack up combos in this juicy arcade hit.",playUrl:"https://www.crazygames.com/game/fruit-ninja",         embedUrl:null,                                          tags:["Slicing","Combos","Mobile"],       defaultRating:4.2, isFeatured:false, isTrending:false, isNew:true  }
+/* ── 10.4 AI FOR 20 PROFESSIONS ── */
+const PROFESSIONS = [
+  {
+    id: "students",
+    name: "Students & Academics",
+    icon: "🎓",
+    category: "Education",
+    tagline: "Ace coursework, synthesize lecture notes, and draft thesis papers with verified citations.",
+    description: "Built for university students, high school learners, and academic researchers looking to study smarter with ethical AI assistance.",
+    recommendedTools: ["chatgpt", "claude", "perplexity", "notion-ai", "grammarly", "speechify"],
+    popularTasks: [
+      "Synthesize lecture transcripts into flashcards",
+      "Literature review with verified academic citations",
+      "Proofread thesis papers for tone and clarity",
+      "Explain complex STEM concepts step-by-step"
+    ],
+    workflows: ["academic-research"]
+  },
+  {
+    id: "developers",
+    name: "Software Engineers",
+    icon: "💻",
+    category: "Engineering",
+    tagline: "Build apps 10x faster with agentic IDEs, automated unit testing, and instant generative UI.",
+    description: "Tailored for full-stack developers, backend architects, and DevOps engineers orchestrating code with modern AI workflows.",
+    recommendedTools: ["cursor", "github-copilot", "v0", "bolt", "phind", "deepseek"],
+    popularTasks: [
+      "Build full-stack web app from prompt to deployment",
+      "Semantic codebase refactoring across multiple files",
+      "Automated unit and integration test generation",
+      "Debug cryptic production stack traces"
+    ],
+    workflows: ["web-app-mvp"]
+  },
+  {
+    id: "designers",
+    name: "UI/UX & Graphic Designers",
+    icon: "🎨",
+    category: "Creative",
+    tagline: "Generate brand assets, interactive UI mockups, and high-resolution creative concepts.",
+    description: "For product designers, graphic artists, and brand architects seeking photorealistic textures, layout ideas, and vector assets.",
+    recommendedTools: ["midjourney", "flux", "canva-ai", "recraft", "adobe-firefly", "leonardo"],
+    popularTasks: [
+      "Generate vector logos and brand assets",
+      "Create photorealistic 3D product mockups",
+      "Rapid UI component wireframing",
+      "Moodboard concept art generation"
+    ],
+    workflows: ["youtube-creation", "web-app-mvp"]
+  },
+  {
+    id: "engineers",
+    name: "Data & Systems Engineers",
+    icon: "⚙️",
+    category: "Engineering",
+    tagline: "Optimize SQL queries, automate ETL pipelines, and fine-tune open-weights models.",
+    description: "Engineered for cloud architects, data scientists, and systems builders operating high-scale data workflows.",
+    recommendedTools: ["deepseek", "qwen", "amazon-q", "phind", "cursor", "letta"],
+    popularTasks: [
+      "Optimize slow SQL queries and explain plans",
+      "Generate synthetic training datasets",
+      "Build persistent-memory autonomous agent pipelines",
+      "Troubleshoot Docker and Kubernetes deployment yamls"
+    ],
+    workflows: ["web-app-mvp"]
+  },
+  {
+    id: "teachers",
+    name: "Teachers & Educators",
+    icon: "📚",
+    category: "Education",
+    tagline: "Generate engaging lesson plans, customized rubrics, and differentiated learning material.",
+    description: "Empowers educators from K-12 to higher education to save 15+ hours weekly on grading, planning, and material creation.",
+    recommendedTools: ["claude", "chatgpt", "canva-ai", "gemini", "notion-ai", "speechify"],
+    popularTasks: [
+      "Generate differentiated lesson plans by grade level",
+      "Create interactive quiz questions with answer keys",
+      "Draft objective essay grading rubrics",
+      "Turn textbook chapters into audio listening guides"
+    ],
+    workflows: ["academic-research"]
+  },
+  {
+    id: "business",
+    name: "Founders & Business Owners",
+    icon: "🚀",
+    category: "Business",
+    tagline: "Model unit economics, build investor pitch decks, and automate daily operations.",
+    description: "Designed for startup founders and SMB owners executing fast without massive agency budgets.",
+    recommendedTools: ["notion-ai", "claude", "chatgpt", "perplexity", "copy-ai", "jasper"],
+    popularTasks: [
+      "Financial model and pitch deck presentation",
+      "Competitive landscape analysis and battlecards",
+      "Standard Operating Procedure (SOP) documentation",
+      "Drafting partnership contracts and NDAs"
+    ],
+    workflows: ["pitch-deck", "content-engine"]
+  },
+  {
+    id: "marketers",
+    name: "Marketers & Growth Hackers",
+    icon: "📈",
+    category: "Marketing",
+    tagline: "Publish SEO pillar articles, test ad copy variants, and syndicate video across channels.",
+    description: "For growth managers and digital marketers driving organic traffic, PPC conversion, and brand awareness.",
+    recommendedTools: ["jasper", "copy-ai", "writesonic", "perplexity", "canva-ai", "opus-clip"],
+    popularTasks: [
+      "SEO long-form pillar post research and drafting",
+      "A/B testing high-converting ad headlines",
+      "Repurposing webinars into viral TikTok/Shorts clips",
+      "Crafting automated lead nurture email sequences"
+    ],
+    workflows: ["content-engine", "youtube-creation"]
+  },
+  {
+    id: "hr",
+    name: "HR & Talent Recruiters",
+    icon: "👥",
+    category: "Operations",
+    tagline: "Draft compliant job descriptions, screen candidate resumes, and standardize onboarding.",
+    description: "For people ops leaders and recruiters building high-performance teams with bias-conscious AI workflows.",
+    recommendedTools: ["chatgpt", "claude", "notion-ai", "grammarly", "copilot", "coze"],
+    popularTasks: [
+      "Draft inclusive role descriptions with benchmark salaries",
+      "Structured behavioral interview question generator",
+      "Employee onboarding wiki documentation",
+      "Company policy and employee handbook updates"
+    ],
+    workflows: ["pitch-deck"]
+  },
+  {
+    id: "accountants",
+    name: "Accountants & Financial Analysts",
+    icon: "📊",
+    category: "Finance",
+    tagline: "Audit spreadsheets, generate financial ratio commentary, and summarize tax updates.",
+    description: "For CPAs, CFOs, and financial controllers ensuring accuracy in cash flow forecasts and compliance.",
+    recommendedTools: ["chatgpt", "claude", "copilot", "notion-ai", "perplexity", "deepseek"],
+    popularTasks: [
+      "Audit complex Excel/Sheets financial formulas",
+      "Variance commentary on budget vs actual financials",
+      "Summarize localized tax legislation changes",
+      "Extract structured data from scanned invoices"
+    ],
+    workflows: ["pitch-deck"]
+  },
+  {
+    id: "lawyers",
+    name: "Lawyers & Legal Counsel",
+    icon: "⚖️",
+    category: "Legal",
+    tagline: "Analyze 200-page agreements, flag indemnification risks, and draft clauses rapidly.",
+    description: "For corporate attorneys, paralegals, and legal ops reviewing high volumes of commercial contracts.",
+    recommendedTools: ["claude", "chatgpt", "perplexity", "notion-ai", "copilot", "deepseek"],
+    popularTasks: [
+      "Review contract legal clauses and risks",
+      "Compare supplier Master Services Agreement (MSA) changes",
+      "Draft custom non-disclosure and licensing terms",
+      "Cross-examine regulatory compliance guidelines"
+    ],
+    workflows: ["legal-review"]
+  },
+  {
+    id: "healthcare",
+    name: "Healthcare & Clinical Staff",
+    icon: "🩺",
+    category: "Healthcare",
+    tagline: "Summarize clinical notes, transcribe consultations, and translate medical literature.",
+    description: "For physicians, nurses, and medical researchers reducing administrative charting burden safely.",
+    recommendedTools: ["claude", "perplexity", "chatgpt", "speechify", "whisper", "notion-ai"],
+    popularTasks: [
+      "Draft patient-friendly medical explanations",
+      "Summarize multi-study clinical trials",
+      "Voice dictation to structured SOAP note formatting",
+      "Translate discharge instructions into 10+ languages"
+    ],
+    workflows: ["academic-research"]
+  },
+  {
+    id: "writers",
+    name: "Authors & Journalists",
+    icon: "✍️",
+    category: "Creative",
+    tagline: "Overcome writer's block, develop deep character arcs, and polish editorial manuscripts.",
+    description: "For novelists, screenwriters, investigative journalists, and freelance columnists crafting gripping stories.",
+    recommendedTools: ["claude", "chatgpt", "grammarly", "jasper", "notion-ai", "writesonic"],
+    popularTasks: [
+      "Story worldbuilding and character development",
+      "Editorial manuscript line-editing for pacing",
+      "Interview transcript synthesis into investigative story",
+      "Alternative headline and hook generation"
+    ],
+    workflows: ["content-engine"]
+  },
+  {
+    id: "architects",
+    name: "Architects & 3D Spatial Designers",
+    icon: "🏛️",
+    category: "Design",
+    tagline: "Render photorealistic facade concepts, explore spatial lighting, and iterate 3D forms.",
+    description: "For architects, interior designers, and landscape visualizers translating blueprints into stunning imagery.",
+    recommendedTools: ["midjourney", "stable-diffusion", "recraft", "luma", "adobe-firefly", "kling"],
+    popularTasks: [
+      "Generate realistic exterior facade renders",
+      "Day-to-night spatial lighting studies",
+      "Biophilic interior concept iterations",
+      "Flythrough camera video generation from render"
+    ],
+    workflows: ["youtube-creation"]
+  },
+  {
+    id: "researchers",
+    name: "Scientists & Researchers",
+    icon: "🔬",
+    category: "Science",
+    tagline: "Synthesize 100+ PDF papers, verify methodological rigor, and extract key metrics.",
+    description: "For PhDs, R&D scientists, and market analysts conducting exhaustive literature reviews and data synthesis.",
+    recommendedTools: ["perplexity", "claude", "phind", "deepseek", "chatgpt", "notion-ai"],
+    popularTasks: [
+      "Extract sample sizes and effect metrics from papers",
+      "Compare competing experimental methodologies",
+      "Draft structured meta-analysis summaries",
+      "Code data visualization charts in Python"
+    ],
+    workflows: ["academic-research"]
+  },
+  {
+    id: "creators",
+    name: "Content Creators & YouTubers",
+    icon: "🎬",
+    category: "Media",
+    tagline: "Produce viral video hooks, clone studio voiceovers, and generate b-roll in minutes.",
+    description: "For YouTubers, podcasters, stream editors, and short-form creators scaling their publishing schedule.",
+    recommendedTools: ["descript", "elevenlabs", "runway", "kling", "midjourney", "opus-clip", "suno"],
+    popularTasks: [
+      "Script retention hooks and pacing beats",
+      "Generate studio-quality voiceover narration",
+      "Create high-CTR YouTube thumbnails",
+      "Automated multi-angle video cut and captioning"
+    ],
+    workflows: ["youtube-creation"]
+  },
+  {
+    id: "sales",
+    name: "Sales & Account Executives",
+    icon: "💼",
+    category: "Sales",
+    tagline: "Hyper-personalize outreach emails, analyze deal risks, and practice objection handling.",
+    description: "For SDRs, account executives, and revenue leaders accelerating deal closing cycles.",
+    recommendedTools: ["salesforce-einstein", "copy-ai", "claude", "chatgpt", "heygen", "grammarly"],
+    popularTasks: [
+      "Hyper-personalized cold email based on LinkedIn profile",
+      "Roleplay tough objection handling before demo",
+      "Extract MEDDPICC deal qualifiers from call transcripts",
+      "Generate personalized video outreach at scale"
+    ],
+    workflows: ["pitch-deck"]
+  },
+  {
+    id: "project-managers",
+    name: "Project & Product Managers",
+    icon: "📋",
+    category: "Management",
+    tagline: "Draft PRDs, write user stories with acceptance criteria, and map out sprint timelines.",
+    description: "For PMs and Scrum masters keeping distributed agile teams aligned and unblocked.",
+    recommendedTools: ["notion-ai", "claude", "copilot", "chatgpt", "coze", "dify"],
+    popularTasks: [
+      "Draft Product Requirement Document (PRD) from bullet points",
+      "Convert user feedback into prioritized user stories",
+      "Create stakeholder release notes and changelogs",
+      "Map out risk dependency matrices for launches"
+    ],
+    workflows: ["web-app-mvp"]
+  },
+  {
+    id: "customer-support",
+    name: "Customer Support Specialists",
+    icon: "🎧",
+    category: "Support",
+    tagline: "Deploy 24/7 autonomous support bots, draft empathetic replies, and build help centers.",
+    description: "For support agents and CX managers reducing response times to under 30 seconds.",
+    recommendedTools: ["coze", "chatgpt", "dify", "elevenlabs", "grammarly", "copy-ai"],
+    popularTasks: [
+      "Build custom FAQ chatbot trained on docs",
+      "De-escalate frustrated customer ticket replies",
+      "Draft searchable Knowledge Base articles",
+      "Categorize and tag incoming ticket sentiment"
+    ],
+    workflows: ["customer-support-ops"]
+  },
+  {
+    id: "freelancers",
+    name: "Solopreneurs & Freelancers",
+    icon: "⚡",
+    category: "Business",
+    tagline: "Manage client contracts, automate invoicing, code prototypes, and market your services.",
+    description: "For independent consultants and agency owners wearing every hat from marketing to execution.",
+    recommendedTools: ["claude", "canva-ai", "notion-ai", "cursor", "elevenlabs", "chatgpt"],
+    popularTasks: [
+      "Draft client proposals and scope-of-work (SOW)",
+      "Automated invoice reminder email templates",
+      "Build portfolio website in an afternoon",
+      "Execute multi-disciplinary client deliverables"
+    ],
+    workflows: ["pitch-deck", "web-app-mvp", "content-engine"]
+  },
+  {
+    id: "admin",
+    name: "Executive Assistants & Admins",
+    icon: "🗂️",
+    category: "Operations",
+    tagline: "Manage hectic calendar scheduling, summarize board meetings, and draft executive memos.",
+    description: "For chiefs of staff, executive assistants, and office managers keeping leadership organized.",
+    recommendedTools: ["copilot", "chatgpt", "notion-ai", "grammarly", "speechify", "whisper"],
+    popularTasks: [
+      "Synthesize 2-hour board meeting into action items",
+      "Draft polished executive memos and travel itineraries",
+      "Organize inbox chaos into prioritized action folders",
+      "Proofread confidential leadership presentations"
+    ],
+    workflows: ["pitch-deck"]
+  }
 ];
 
-/* ── Game State ── */
-let gameFilter = "all", gameSearch = "", showFavoritesOnly = false;
-let currentPlayingGame = null;
+function renderProfessionsGrid() {
+  const grid = document.getElementById("professions-grid");
+  if (!grid) return;
 
-/* ── LocalStorage Helpers ── */
-function getGameFavorites() {
-  try { return JSON.parse(localStorage.getItem("organ_game_favs")) || []; } catch(_) { return []; }
-}
-function saveGameFavorites(f) {
-  try { localStorage.setItem("organ_game_favs", JSON.stringify(f)); } catch(_){}
-}
-function getRecentGames() {
-  try { return JSON.parse(localStorage.getItem("organ_recent_games")) || []; } catch(_) { return []; }
-}
-function addRecentGame(id) {
-  var r = getRecentGames().filter(function(x){ return x !== id; });
-  r.unshift(id);
-  if (r.length > 10) r = r.slice(0, 10);
-  try { localStorage.setItem("organ_recent_games", JSON.stringify(r)); } catch(_){}
-}
-function getGameRatings() {
-  try { return JSON.parse(localStorage.getItem("organ_game_ratings")) || {}; } catch(_) { return {}; }
-}
-function setGameRating(id, stars) {
-  var ratings = getGameRatings();
-  ratings[id] = stars;
-  try { localStorage.setItem("organ_game_ratings", JSON.stringify(ratings)); } catch(_){}
-}
+  grid.innerHTML = PROFESSIONS.map(prof => {
+    const topToolChips = prof.recommendedTools.slice(0, 3).map(tid => {
+      const t = AI_TOOLS.find(x => x.id === tid);
+      return t ? `<span class="prof-tool-chip">${t.emoji} ${t.name}</span>` : '';
+    }).join("");
 
-/* ── Star Rendering ── */
-function renderStars(rating) {
-  var html = "", full = Math.floor(rating), half = (rating - full) >= 0.4;
-  for (var i = 1; i <= 5; i++) {
-    if (i <= full) html += '<span class="star star-full">\u2605</span>';
-    else if (i === full + 1 && half) html += '<span class="star star-half">\u2605</span>';
-    else html += '<span class="star star-empty">\u2606</span>';
-  }
-  return html;
-}
-function renderInteractiveStars(gameId) {
-  var ratings = getGameRatings(), cur = ratings[gameId] || 0, html = "";
-  for (var i = 1; i <= 5; i++) {
-    html += '<span class="star-btn ' + (i <= cur ? 'star-btn-active' : '') + '" onclick="rateCurrentGame(' + i + ')">\u2605</span>';
-  }
-  return html;
+    return `
+      <article class="profession-card" onclick="openProfessionModal('${prof.id}')" tabindex="0" role="button" aria-label="Explore ${prof.name} AI Hub">
+        <div>
+          <div class="prof-header">
+            <div class="prof-icon-wrap" aria-hidden="true">${prof.icon}</div>
+            <span class="prof-tool-count-badge">${prof.recommendedTools.length} Vetted Tools</span>
+          </div>
+          <h3 class="prof-title">${prof.name}</h3>
+          <p class="prof-tagline">${prof.tagline}</p>
+        </div>
+        <div>
+          <div class="prof-top-tools-label">Top Recommended Stacks:</div>
+          <div class="prof-tools-chips">${topToolChips}</div>
+          <div class="prof-card-footer">
+            <span class="prof-card-link">Explore Hub →</span>
+            <span style="font-size:0.75rem;color:var(--white-30);">${prof.popularTasks.length} Workflows</span>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
-/* ── Card Builders ── */
-function buildGameCard(game, variant) {
-  var el = document.createElement("article");
-  var isFav = getGameFavorites().indexOf(game.id) >= 0;
-  var userRating = getGameRatings()[game.id] || game.defaultRating;
-  var cat = GAME_CATEGORIES[game.category] || {};
+function openProfessionModal(profId) {
+  const prof = PROFESSIONS.find(p => p.id === profId);
+  if (!prof) return;
 
-  // Category-specific high-quality looping preview videos from Mixkit CDN
-  var videoUrl = "";
-  if (game.category === "action") {
-    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-first-person-shooter-game-screen-close-up-41613-large.mp4";
-  } else if (game.category === "racing") {
-    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-futuristic-driving-simulator-in-first-person-41662-large.mp4";
-  } else if (game.category === "arcade") {
-    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-arcade-game-machine-screen-close-up-41617-large.mp4";
-  } else {
-    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-gaming-setup-with-neon-lights-and-screens-43642-large.mp4";
-  }
+  document.getElementById("prof-modal-icon").textContent = prof.icon;
+  document.getElementById("prof-modal-title").textContent = `${prof.name} AI Hub`;
+  document.getElementById("prof-modal-sub").textContent = prof.description;
 
-  if (variant === "featured") {
-    el.className = "featured-game-card";
-    el.innerHTML =
-      '<div class="fg-thumb" style="background:linear-gradient(135deg,' + cat.color + '22,' + cat.color + '08)">' +
-        '<span class="fg-emoji">' + game.emoji + '</span>' +
-        '<video class="game-card-video" src="' + videoUrl + '" loop muted playsinline></video>' +
-        '<div class="card-glow"></div>' +
-        '<div class="fg-featured-badge">\u2B50 FEATURED</div>' +
-      '</div>' +
-      '<div class="fg-body">' +
-        '<div class="fg-name">' + game.name + '</div>' +
-        '<div class="fg-cat">' + (cat.emoji || "") + " " + (cat.label || game.category) + '</div>' +
-        '<p class="fg-desc">' + game.description + '</p>' +
-        '<div class="fg-bottom">' +
-          '<div class="fg-stars">' + renderStars(userRating) + '</div>' +
-          '<button class="fg-play-btn" onclick="event.stopPropagation();openGamePlayer(\'' + game.id + '\')">\u25B6 Play Now</button>' +
-        '</div>' +
-      '</div>' +
-      '<button class="game-fav-btn ' + (isFav ? "fav-active" : "") + '" onclick="event.stopPropagation();toggleFavorite(\'' + game.id + '\')" aria-label="Favorite">' + (isFav ? "\u2764\uFE0F" : "\u2661") + '</button>';
-  } else if (variant === "compact") {
-    el.className = "compact-game-card";
-    el.innerHTML =
-      '<div class="cg-thumb" style="background:linear-gradient(135deg,' + cat.color + '22,' + cat.color + '08)">' +
-        '<span class="cg-emoji">' + game.emoji + '</span>' +
-      '</div>' +
-      '<div class="cg-name">' + game.name + '</div>';
-  } else {
-    el.className = "game-card";
-    el.innerHTML =
-      '<div class="gc-thumb" style="background:linear-gradient(135deg,' + cat.color + '15,' + cat.color + '05)">' +
-        '<span class="gc-emoji">' + game.emoji + '</span>' +
-        '<video class="game-card-video" src="' + videoUrl + '" loop muted playsinline></video>' +
-        '<div class="card-glow"></div>' +
-        '<span class="gc-cat-badge" style="border-color:' + cat.color + '40;color:' + cat.color + '">' + (cat.label || "") + '</span>' +
-        '<button class="game-fav-btn ' + (isFav ? "fav-active" : "") + '" onclick="event.stopPropagation();toggleFavorite(\'' + game.id + '\')" aria-label="Favorite">' + (isFav ? "\u2764\uFE0F" : "\u2661") + '</button>' +
-      '</div>' +
-      '<div class="gc-body">' +
-        '<div class="gc-name">' + game.name + '</div>' +
-        '<p class="gc-desc">' + game.description + '</p>' +
-        '<div class="gc-bottom">' +
-          '<div class="gc-stars">' + renderStars(userRating) + '</div>' +
-          '<button class="gc-play-btn" onclick="event.stopPropagation();openGamePlayer(\'' + game.id + '\')">\u25B6 Play</button>' +
-        '</div>' +
-      '</div>';
+  // Tools list
+  const toolsHtml = prof.recommendedTools.map(tid => {
+    const t = AI_TOOLS.find(x => x.id === tid);
+    if (!t) return '';
+    const isSaved = isToolSaved(t.id);
+    return `
+      <div class="prof-modal-tool-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;color:var(--white);">
+            <span>${t.emoji}</span>
+            <span>${t.name}</span>
+          </div>
+          <span style="font-size:0.72rem;color:var(--neon-cyan);background:rgba(0,245,212,0.1);padding:2px 8px;border-radius:99px;">
+            ${t.free.price === 'No free plan' ? t.paid.price : t.free.price}
+          </span>
+        </div>
+        <p style="font-size:0.78rem;color:var(--white-60);margin:0;line-height:1.4;">${t.bestFor || t.description}</p>
+        <div style="display:flex;gap:0.5rem;margin-top:0.25rem;">
+          <button class="btn-ghost" onclick="openToolModal('${t.id}')" style="flex:1;padding:6px;font-size:0.75rem;">
+            Inspect Details →
+          </button>
+          <button class="btn-ghost" onclick="toggleSaveTool('${t.id}')" style="padding:6px 10px;font-size:0.75rem;">
+            ${isSaved ? '★' : '☆'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Tasks list
+  const tasksHtml = prof.popularTasks.map((tsk, i) => `
+    <li style="font-size:0.85rem;color:var(--white-90);margin-bottom:0.5rem;display:flex;align-items:flex-start;gap:0.5rem;">
+      <span style="color:var(--neon-cyan);font-weight:700;">${i + 1}.</span>
+      <span>${tsk}</span>
+    </li>
+  `).join("");
+
+  // Prompts for this profession
+  const relatedPrompts = PROMPT_LIBRARY.filter(p => p.profession === prof.id).slice(0, 2);
+  let promptsHtml = '';
+  if (relatedPrompts.length > 0) {
+    promptsHtml = `
+      <div class="modal-section-title">💡 Top Ready-to-Use Prompts for ${prof.name}</div>
+      <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.5rem;">
+        ${relatedPrompts.map(pr => `
+          <div style="background:#030408;border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+              <strong style="font-size:0.85rem;color:var(--white);">${pr.title}</strong>
+              <span style="font-size:0.72rem;color:var(--neon-cyan);">Tool: ${pr.toolRecommended}</span>
+            </div>
+            <pre style="background:var(--white-03);padding:0.75rem;border-radius:4px;font-family:monospace;font-size:0.78rem;color:var(--white-90);white-space:pre-wrap;max-height:100px;overflow-y:auto;margin-bottom:0.75rem;">${pr.prompt}</pre>
+            <button class="btn-ghost" onclick="copyPromptText('${pr.id}', this)" style="width:100%;font-size:0.78rem;padding:6px;">
+              📋 Copy Prompt to Clipboard
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
   }
 
-  // Bind interactive 3D perspective tilt & video preview playback listeners
-  if (variant !== "compact") {
-    el.addEventListener("mouseenter", function() {
-      var video = el.querySelector(".game-card-video");
-      if (video) {
-        // Pre-load and play the loop
-        video.play().catch(function(){});
-      }
-    });
+  document.getElementById("prof-modal-body").innerHTML = `
+    <div class="modal-section-title">⭐ Core AI Toolkit for ${prof.name}</div>
+    <div class="prof-modal-tools-grid" style="margin-bottom:2rem;">
+      ${toolsHtml}
+    </div>
 
-    el.addEventListener("mouseleave", function() {
-      var video = el.querySelector(".game-card-video");
-      if (video) {
-        video.pause();
-        video.currentTime = 0;
-      }
-      el.style.transform = "";
-      var glow = el.querySelector(".card-glow");
-      if (glow) {
-        glow.style.opacity = "0";
-      }
-    });
+    <div class="modal-section-title">🎯 Popular High-Impact Workflows</div>
+    <ul style="list-style:none;padding:0;margin:0 0 2rem;">
+      ${tasksHtml}
+    </ul>
 
-    el.addEventListener("mousemove", function(e) {
-      var rect = el.getBoundingClientRect();
-      var x = e.clientX - rect.left;
-      var y = e.clientY - rect.top;
-      
-      // Compute mouse offsets relative to the element's center (ranging from -0.5 to 0.5)
-      var xc = (x / rect.width) - 0.5;
-      var yc = (y / rect.height) - 0.5;
-      
-      // Calculate rotation angles (up to 12 degrees max tilt)
-      var rotateX = -(yc * 24);
-      var rotateY = (xc * 24);
-      
-      el.style.transform = "perspective(800px) rotateX(" + rotateX + "deg) rotateY(" + rotateY + "deg) translateY(-6px)";
-      
-      // Shift glow spot
-      var glow = el.querySelector(".card-glow");
-      if (glow) {
-        glow.style.opacity = "1";
-        glow.style.left = x + "px";
-        glow.style.top = y + "px";
-      }
-    });
-  }
+    ${promptsHtml}
 
-  el.addEventListener("click", function() { openGamePlayer(game.id); });
-  return el;
+    <div style="display:flex;justify-content:flex-end;margin-top:1.5rem;">
+      <button class="btn-neon" onclick="closeModal('profession-modal')">Close Hub ✕</button>
+    </div>
+  `;
+
+  openModal("profession-modal");
 }
 
-/* ── Filtered list ── */
-function getFilteredGames() {
-  return BROWSER_GAMES.filter(function(g) {
-    var s = gameSearch.toLowerCase();
-    var matchCat = gameFilter === "all" || g.category === gameFilter;
-    var matchSrch = !s || g.name.toLowerCase().indexOf(s) >= 0
-      || g.description.toLowerCase().indexOf(s) >= 0
-      || g.tags.some(function(t){ return t.toLowerCase().indexOf(s) >= 0; });
-    return matchCat && matchSrch;
+/* ── 10.5 PROFESSION + TASK RECOMMENDER ("I AM A... I WANT TO...") ── */
+function initProfessionRecommender() {
+  const profSelect = document.getElementById("rec-prof-select");
+  if (!profSelect) return;
+
+  profSelect.innerHTML = PROFESSIONS.map(p => `
+    <option value="${p.id}">${p.icon} ${p.name}</option>
+  `).join("");
+
+  onRecommenderProfChange();
+}
+
+function onRecommenderProfChange() {
+  const profSelect = document.getElementById("rec-prof-select");
+  const taskSelect = document.getElementById("rec-task-select");
+  if (!profSelect || !taskSelect) return;
+
+  const profId = profSelect.value;
+  const prof = PROFESSIONS.find(p => p.id === profId) || PROFESSIONS[0];
+
+  taskSelect.innerHTML = prof.popularTasks.map((t, idx) => `
+    <option value="${idx}">${t}</option>
+  `).join("");
+}
+
+function runRecommender() {
+  const profSelect = document.getElementById("rec-prof-select");
+  const taskSelect = document.getElementById("rec-task-select");
+  const resultsBox = document.getElementById("recommender-results");
+  const titleEl = document.getElementById("recommender-results-title");
+  const gridEl = document.getElementById("recommender-cards-grid");
+
+  if (!profSelect || !taskSelect || !resultsBox) return;
+
+  const profId = profSelect.value;
+  const prof = PROFESSIONS.find(p => p.id === profId) || PROFESSIONS[0];
+  const selectedTask = prof.popularTasks[taskSelect.value] || prof.popularTasks[0];
+
+  titleEl.innerHTML = `🎯 Tailored AI Stack for <span class="neon-text">${prof.name}</span>: <em>"${selectedTask}"</em>`;
+  resultsBox.classList.remove("hidden");
+
+  // Get top 3 tools tailored for this profession
+  const recTools = prof.recommendedTools.slice(0, 3).map(id => AI_TOOLS.find(t => t.id === id)).filter(Boolean);
+
+  gridEl.innerHTML = recTools.map((tool, idx) => {
+    const isSaved = isToolSaved(tool.id);
+    return `
+      <div class="tool-card" style="margin:0;">
+        <button class="card-bookmark-btn ${isSaved ? 'saved' : ''}" onclick="toggleSaveTool('${tool.id}');runRecommender();">
+          ${isSaved ? '★' : '☆'}
+        </button>
+        <div class="card-top">
+          <div class="card-logo">${tool.emoji}</div>
+          <div class="card-info">
+            <div class="card-name">${tool.name}</div>
+            <div class="card-category">Rank #${idx + 1} Best Match</div>
+            <div class="card-company">${tool.company}</div>
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--neon-cyan);margin-bottom:0.5rem;font-weight:600;">
+          🎯 ${tool.bestFor || tool.description}
+        </div>
+        <p class="card-description">${tool.description}</p>
+        <div class="plan-row">
+          <div class="plan-badge ${tool.free.price !== 'No free plan' ? 'free-badge' : 'paid-badge'}">
+            <div class="plan-label">${tool.free.price !== 'No free plan' ? '✅ FREE' : '⚠️ PAID ONLY'}</div>
+            <div class="plan-price">${tool.free.price}</div>
+          </div>
+          <div class="plan-badge paid-badge">
+            <div class="plan-label">💳 PAID</div>
+            <div class="plan-price">${tool.paid.price}</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="card-btn" onclick="openToolModal('${tool.id}')">Inspect AI Details →</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  resultsBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* ── 10.6 AI WORKFLOWS (MULTI-TOOL PIPELINES) ── */
+const WORKFLOWS = [
+  {
+    id: "youtube-creation",
+    title: "End-to-End YouTube Production Pipeline",
+    badge: "MEDIA & CONTENT",
+    desc: "From blank concept to fully captioned 4K video with voiceover, thumbnail, and b-roll.",
+    timeSaved: "Save 12+ hours per video",
+    steps: [
+      { stepNum: "1", toolId: "chatgpt", toolName: "ChatGPT / Claude", actionTag: "Scripting", instruction: "Draft viral retention hook, 3-act narrative pacing, and YouTube title ideas." },
+      { stepNum: "2", toolId: "midjourney", toolName: "Midjourney", actionTag: "Cover Art", instruction: "Generate high-contrast, expressive character thumbnail with cinematic lighting." },
+      { stepNum: "3", toolId: "elevenlabs", toolName: "ElevenLabs", actionTag: "Voiceover", instruction: "Synthesize emotionally expressive studio-grade human speech from the script." },
+      { stepNum: "4", toolId: "kling", toolName: "Kling AI / Runway", actionTag: "B-Roll Gen", instruction: "Generate cinematic 1080p visual cutaways and motion illustrations." },
+      { stepNum: "5", toolId: "descript", toolName: "Descript", actionTag: "Assembly & Cut", instruction: "Strip filler words, assemble audio/video timeline, and render dynamic animated captions." }
+    ]
+  },
+  {
+    id: "pitch-deck",
+    title: "Startup Pitch Deck & Financial Model",
+    badge: "STARTUP & VENTURE",
+    desc: "Transform rough founder notes into an investor-ready 12-slide deck with defensible unit economics.",
+    timeSaved: "Save 20+ hours of prep",
+    steps: [
+      { stepNum: "1", toolId: "claude", toolName: "Claude 3.5 Sonnet", actionTag: "Narrative & Math", instruction: "Formulate market sizing (TAM/SAM/SOM), unit economics, and slide-by-slide storyline." },
+      { stepNum: "2", toolId: "chatgpt", toolName: "ChatGPT / DeepSeek", actionTag: "Financial Model", instruction: "Generate 3-year cash flow projections, customer acquisition cost (CAC), and LTV models in CSV." },
+      { stepNum: "3", toolId: "midjourney", toolName: "Midjourney", actionTag: "Mockups", instruction: "Synthesize 3D hardware or software UI concept renders demonstrating product vision." },
+      { stepNum: "4", toolId: "notion-ai", toolName: "Notion AI", actionTag: "Exec Summary", instruction: "Compile investor one-pager and data room documentation with clear KPIs." }
+    ]
+  },
+  {
+    id: "web-app-mvp",
+    title: "Full-Stack Web App Development",
+    badge: "SOFTWARE ENGINEERING",
+    desc: "Architect, code, test, and deploy a responsive SaaS web application in 24 hours.",
+    timeSaved: "Save 2+ weeks dev time",
+    steps: [
+      { stepNum: "1", toolId: "v0", toolName: "v0 by Vercel", actionTag: "Frontend UI", instruction: "Prompt and iterate interactive React dashboards, modern modals, and Tailwind responsive layouts." },
+      { stepNum: "2", toolId: "cursor", toolName: "Cursor IDE", actionTag: "Full-Stack Logic", instruction: "Index codebase, wire frontend components to backend REST/GraphQL endpoints with Composer agent." },
+      { stepNum: "3", toolId: "github-copilot", toolName: "GitHub Copilot", actionTag: "Testing & QA", instruction: "Generate automated Jest/Vitest unit test suites and edge-case validations." },
+      { stepNum: "4", toolId: "deepseek", toolName: "DeepSeek / Phind", actionTag: "Optimization", instruction: "Audit SQL database query plans, index performance, and resolve container bugs." }
+    ]
+  },
+  {
+    id: "content-engine",
+    title: "SEO Content Engine & Social Syndication",
+    badge: "ORGANIC GROWTH",
+    desc: "Rank on Google search while repurposing one authoritative article into 20+ multi-platform posts.",
+    timeSaved: "Save 8+ hours per article",
+    steps: [
+      { stepNum: "1", toolId: "perplexity", toolName: "Perplexity AI", actionTag: "Research & Trends", instruction: "Discover untapped search keywords, competitor content gaps, and verified primary sources." },
+      { stepNum: "2", toolId: "claude", toolName: "Claude 3.5 Sonnet", actionTag: "Pillar Draft", instruction: "Write comprehensive, structured 2,500-word authoritative guide with practical examples." },
+      { stepNum: "3", toolId: "grammarly", toolName: "Grammarly", actionTag: "Tone Polish", instruction: "Optimize sentence clarity, readability score, and brand voice consistency." },
+      { stepNum: "4", toolId: "canva-ai", toolName: "Canva AI", actionTag: "Social Graphics", instruction: "Batch-generate LinkedIn carousel slides and infographic charts matching brand colors." },
+      { stepNum: "5", toolId: "copy-ai", toolName: "Copy.ai", actionTag: "Repurposing", instruction: "Extract 5 viral Twitter/X threads and 3 newsletter blurbs from the pillar article." }
+    ]
+  },
+  {
+    id: "academic-research",
+    title: "Academic Literature Review & Paper Drafting",
+    badge: "ACADEMIC & RESEARCH",
+    desc: "Synthesize hundreds of journal publications into an organized, cited research manuscript.",
+    timeSaved: "Save 40+ hours reading time",
+    steps: [
+      { stepNum: "1", toolId: "perplexity", toolName: "Perplexity AI", actionTag: "Citation Discovery", instruction: "Locate peer-reviewed papers on PubMed, arXiv, and IEEE with direct DOIs." },
+      { stepNum: "2", toolId: "claude", toolName: "Claude 3.5 Sonnet", actionTag: "Synthesis", instruction: "Upload PDF batches to extract methodological differences, findings, and research debates." },
+      { stepNum: "3", toolId: "notion-ai", toolName: "Notion AI", actionTag: "Matrix Mapping", instruction: "Organize authors, methodologies, sample sizes, and conclusions in comparison tables." },
+      { stepNum: "4", toolId: "grammarly", toolName: "Grammarly", actionTag: "Academic Polish", instruction: "Enforce rigorous academic styling, passive/active voice balance, and bibliography formatting." }
+    ]
+  },
+  {
+    id: "legal-review",
+    title: "Legal Contract Review & Risk Assessment",
+    badge: "LEGAL & COMPLIANCE",
+    desc: "Safely audit agreements, identify high-liability clauses, and negotiate favorable revisions.",
+    timeSaved: "Save 70% contract cycle time",
+    steps: [
+      { stepNum: "1", toolId: "claude", toolName: "Claude 3.5 Sonnet", actionTag: "200K Parsing", instruction: "Ingest multi-schedule vendor agreements and identify deviation from standard playbook terms." },
+      { stepNum: "2", toolId: "deepseek", toolName: "DeepSeek R1", actionTag: "Risk Reasoning", instruction: "Perform deep reasoning analysis on indemnity, limitation of liability, and IP assignment clauses." },
+      { stepNum: "3", toolId: "notion-ai", toolName: "Notion AI", actionTag: "Risk Register", instruction: "Generate redline suggestions and executive risk summary for business stakeholders." }
+    ]
+  },
+  {
+    id: "customer-support-ops",
+    title: "Autonomous 24/7 AI Customer Support Hub",
+    badge: "OPERATIONS & CX",
+    desc: "Empower support teams to handle 80% of repetitive questions instantly with high CSAT.",
+    timeSaved: "80% reduction in first-response time",
+    steps: [
+      { stepNum: "1", toolId: "coze", toolName: "Coze / Dify", actionTag: "Knowledge Bot", instruction: "Build custom bot connected to documentation, order tracking APIs, and refund policies." },
+      { stepNum: "2", toolId: "chatgpt", toolName: "ChatGPT", actionTag: "Empathy Tuning", instruction: "Formulate empathetic dispute resolution prompts and multi-language routing rules." },
+      { stepNum: "3", toolId: "elevenlabs", toolName: "ElevenLabs", actionTag: "Voice AI Agent", instruction: "Deploy conversational phone agent handling routine call triage with natural voice cadence." }
+    ]
+  }
+];
+
+function renderWorkflows() {
+  const grid = document.getElementById("workflows-grid");
+  if (!grid) return;
+
+  grid.innerHTML = WORKFLOWS.map(wf => {
+    const stepsHtml = wf.steps.map(s => `
+      <div class="workflow-step">
+        <div class="step-number">${s.stepNum}</div>
+        <div class="step-body">
+          <div class="step-header-row">
+            <span class="step-tool-name">${s.toolName}</span>
+            <span class="step-action-tag">${s.actionTag}</span>
+          </div>
+          <p class="step-instruction">${s.instruction}</p>
+        </div>
+      </div>
+    `).join("");
+
+    return `
+      <article class="workflow-card">
+        <div>
+          <div class="workflow-header">
+            <div>
+              <h3 class="workflow-title">${wf.title}</h3>
+              <p class="workflow-desc">${wf.desc}</p>
+            </div>
+            <span class="workflow-badge">${wf.badge}</span>
+          </div>
+          <div class="workflow-steps-timeline">
+            ${stepsHtml}
+          </div>
+        </div>
+        <div class="workflow-footer">
+          <span class="workflow-time-saved">⚡ ${wf.timeSaved}</span>
+          <button class="btn-ghost" onclick="showToast('🔗', 'Workflow copied: ${wf.title}')" style="font-size:0.78rem;padding:6px 14px;">
+            Save Workflow ★
+          </button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+/* ── 10.7 COMPARE AI TOOLS MATRIX ── */
+const COMPARISON_PRESETS = {
+  "chatgpt-vs-claude": ["chatgpt", "claude"],
+  "cursor-vs-copilot": ["cursor", "github-copilot"],
+  "midjourney-vs-flux": ["midjourney", "flux"],
+  "runway-vs-kling": ["runway", "kling"],
+  "suno-vs-udio": ["suno", "udio"]
+};
+
+function initCompare() {
+  const selA = document.getElementById("compare-select-a");
+  const selB = document.getElementById("compare-select-b");
+  if (!selA || !selB) return;
+
+  const optionsHtml = AI_TOOLS.map(t => `
+    <option value="${t.id}">${t.emoji} ${t.name} (${t.company})</option>
+  `).join("");
+
+  selA.innerHTML = optionsHtml;
+  selB.innerHTML = optionsHtml;
+
+  loadComparisonPreset("chatgpt-vs-claude");
+}
+
+function loadComparisonPreset(presetKey) {
+  const pair = COMPARISON_PRESETS[presetKey];
+  if (!pair) return;
+
+  const selA = document.getElementById("compare-select-a");
+  const selB = document.getElementById("compare-select-b");
+  if (selA && selB) {
+    selA.value = pair[0];
+    selB.value = pair[1];
+  }
+
+  document.querySelectorAll(".compare-preset-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("onclick").includes(presetKey));
+  });
+
+  runComparison();
+}
+
+function runComparison() {
+  const selA = document.getElementById("compare-select-a");
+  const selB = document.getElementById("compare-select-b");
+  const container = document.getElementById("compare-table-container");
+  if (!selA || !selB || !container) return;
+
+  const toolA = AI_TOOLS.find(t => t.id === selA.value) || AI_TOOLS[0];
+  const toolB = AI_TOOLS.find(t => t.id === selB.value) || AI_TOOLS[1];
+
+  container.innerHTML = `
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th class="metric-col">Feature / Metric</th>
+          <th>${toolA.emoji} ${toolA.name} <span style="font-size:0.75rem;color:var(--white-60);display:block;font-weight:400;">by ${toolA.company}</span></th>
+          <th>${toolB.emoji} ${toolB.name} <span style="font-size:0.75rem;color:var(--white-60);display:block;font-weight:400;">by ${toolB.company}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="metric-col">Category</td>
+          <td><span class="compare-feature-chip">${CAT_LABELS[toolA.category] || toolA.category}</span></td>
+          <td><span class="compare-feature-chip">${CAT_LABELS[toolB.category] || toolB.category}</span></td>
+        </tr>
+        <tr>
+          <td class="metric-col">Free Tier</td>
+          <td>
+            <strong>${toolA.free.price}</strong>
+            <p style="font-size:0.78rem;color:var(--white-60);margin:0.25rem 0 0;">${toolA.free.detail}</p>
+          </td>
+          <td>
+            <strong>${toolB.free.price}</strong>
+            <p style="font-size:0.78rem;color:var(--white-60);margin:0.25rem 0 0;">${toolB.free.detail}</p>
+          </td>
+        </tr>
+        <tr>
+          <td class="metric-col">Paid Plan</td>
+          <td>
+            <strong style="color:var(--neon-cyan);">${toolA.paid.price}</strong>
+            <p style="font-size:0.78rem;color:var(--white-60);margin:0.25rem 0 0;">${toolA.paid.detail}</p>
+          </td>
+          <td>
+            <strong style="color:var(--neon-cyan);">${toolB.paid.price}</strong>
+            <p style="font-size:0.78rem;color:var(--white-60);margin:0.25rem 0 0;">${toolB.paid.detail}</p>
+          </td>
+        </tr>
+        <tr>
+          <td class="metric-col">Ideal For</td>
+          <td><em>${toolA.bestFor || toolA.description}</em></td>
+          <td><em>${toolB.bestFor || toolB.description}</em></td>
+        </tr>
+        <tr>
+          <td class="metric-col">Ease of Use</td>
+          <td><span class="compare-feature-chip">${toolA.easeOfUse || 'Beginner'}</span></td>
+          <td><span class="compare-feature-chip">${toolB.easeOfUse || 'Beginner'}</span></td>
+        </tr>
+        <tr>
+          <td class="metric-col">Key Strengths</td>
+          <td>
+            <ul style="padding-left:1.2rem;margin:0;font-size:0.82rem;color:var(--white-90);">
+              ${(toolA.pros || ["High performance", "Reliable output"]).map(p => `<li>${p}</li>`).join('')}
+            </ul>
+          </td>
+          <td>
+            <ul style="padding-left:1.2rem;margin:0;font-size:0.82rem;color:var(--white-90);">
+              ${(toolB.pros || ["High performance", "Reliable output"]).map(p => `<li>${p}</li>`).join('')}
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td class="metric-col">Limitations</td>
+          <td>
+            <ul style="padding-left:1.2rem;margin:0;font-size:0.82rem;color:var(--white-60);">
+              ${(toolA.cons || ["Usage limits on free tier"]).map(c => `<li>${c}</li>`).join('')}
+            </ul>
+          </td>
+          <td>
+            <ul style="padding-left:1.2rem;margin:0;font-size:0.82rem;color:var(--white-60);">
+              ${(toolB.cons || ["Usage limits on free tier"]).map(c => `<li>${c}</li>`).join('')}
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td class="metric-col">Actions</td>
+          <td>
+            <button class="btn-ghost" onclick="openToolModal('${toolA.id}')" style="width:100%;font-size:0.78rem;padding:8px 12px;margin-bottom:0.4rem;">
+              Inspect ${toolA.name} →
+            </button>
+            <a href="${toolA.url}" target="_blank" rel="noopener noreferrer" class="btn-neon" style="display:block;text-align:center;font-size:0.78rem;padding:8px 12px;">
+              Visit Official Site ↗
+            </a>
+          </td>
+          <td>
+            <button class="btn-ghost" onclick="openToolModal('${toolB.id}')" style="width:100%;font-size:0.78rem;padding:8px 12px;margin-bottom:0.4rem;">
+              Inspect ${toolB.name} →
+            </button>
+            <a href="${toolB.url}" target="_blank" rel="noopener noreferrer" class="btn-neon" style="display:block;text-align:center;font-size:0.78rem;padding:8px 12px;">
+              Visit Official Site ↗
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+/* ── 10.8 PROMPT LIBRARY (ROLE-SPECIFIC) ── */
+const PROMPT_LIBRARY = [
+  {
+    id: "dev-code-review",
+    profession: "developers",
+    professionName: "Developers",
+    title: "Senior Staff Code Review & Security Audit",
+    scenario: "Paste before merging pull requests to catch subtle concurrency, memory, and security bugs.",
+    toolRecommended: "Claude 3.5 Sonnet / Cursor",
+    prompt: `Act as a Senior Staff Security and Performance Engineer. Review the following code snippet carefully.
+Identify:
+1. Potential security vulnerabilities (injection, auth bypass, memory leaks)
+2. Asynchronous concurrency race conditions or unhandled edge cases
+3. Performance bottlenecks and Big-O computational regressions
+4. Recommended drop-in refactored code with explanatory diffs
+
+Here is the code:
+[PASTE CODE HERE]`
+  },
+  {
+    id: "academic-lit-review",
+    profession: "students",
+    professionName: "Students",
+    title: "Literature Review Synthesis Matrix",
+    scenario: "Compare 3 to 5 academic research papers side by side to uncover thesis gaps.",
+    toolRecommended: "Claude 3.5 Sonnet / Perplexity",
+    prompt: `I am conducting an academic literature review on [TOPIC].
+Synthesize the provided papers into a structured markdown comparison matrix with the following columns:
+- Author & Year
+- Primary Research Question / Hypothesis
+- Sample Size & Methodology
+- Key Findings & Statistical Significance
+- Limitations & Future Research Gaps
+
+Highlight the main theoretical disagreements between the authors.
+Here are the paper abstracts:
+[PASTE ABSTRACTS OR EXTRACTS]`
+  },
+  {
+    id: "legal-contract-audit",
+    profession: "lawyers",
+    professionName: "Lawyers",
+    title: "Master Services Agreement (MSA) Risk Audit",
+    scenario: "Audit incoming vendor agreements and generate redline revisions.",
+    toolRecommended: "Claude 3.5 Sonnet",
+    prompt: `Act as Senior Corporate In-House Counsel. Review the attached commercial agreement clauses from our perspective as the [BUYER / SELLER].
+For each clause:
+1. Classify risk level: LOW, MEDIUM, or HIGH
+2. Flag one-sided terms regarding Limitation of Liability, Indemnity, IP Ownership, and Termination for Convenience
+3. Draft a balanced, industry-standard compromise redline clause that protects our commercial interests
+
+Agreement clauses:
+[PASTE CLAUSES HERE]`
+  },
+  {
+    id: "marketer-pillar-outline",
+    profession: "marketers",
+    professionName: "Marketers",
+    title: "SEO Pillar Article Content Strategy & Outline",
+    scenario: "Create a 2,500-word search-dominating article outline that answers search intent.",
+    toolRecommended: "ChatGPT / Perplexity",
+    prompt: `Act as an elite SEO Content Strategist. I want to rank #1 on Google for the target keyword: "[TARGET KEYWORD]".
+Search Intent: [Informational / Commercial / Transactional]
+Please generate:
+1. A compelling Title Tag and Meta Description optimized for high click-through rate (CTR)
+2. Comprehensive H2 and H3 heading hierarchy answering user search intent thoroughly
+3. Key statistics, diagrams, and data points that should be included to build domain authority
+4. 5 FAQ questions pulled directly from 'People Also Ask' queries with concise direct answers`
+  },
+  {
+    id: "founder-pitch-hook",
+    profession: "business",
+    professionName: "Founders",
+    title: "10-Second Investor Hook & Problem Statement",
+    scenario: "Refine your startup's narrative hook for venture capital investors and accelerator applications.",
+    toolRecommended: "Claude 3.5 Sonnet",
+    prompt: `You are a partner at a top-tier venture capital firm (like Sequoia or Benchmark).
+Critique and rewrite my startup pitch statement.
+My product: [DESCRIBE PRODUCT IN 2 SENTENCES]
+Target Customer: [WHO PAYS FOR IT]
+Core Pain Point: [WHAT MAKES THEIR LIFE HARD TODAY]
+Our Solution: [HOW WE SOLVE IT 10X BETTER]
+
+Deliver:
+1. A ruthless critique identifying vague buzzwords and lack of defensibility
+2. Three punchy alternative 1-sentence hooks tailored for investors
+3. The 'hair on fire' problem statement quantified with monetary impact`
+  },
+  {
+    id: "designer-ui-brief",
+    profession: "designers",
+    professionName: "Designers",
+    title: "Midjourney Cinematic UI/UX Concept Art",
+    scenario: "Generate futuristic, cyberpunk, or clean glassmorphic design concepts.",
+    toolRecommended: "Midjourney v6 / FLUX.1",
+    prompt: `futuristic fintech dashboard interface, dark theme, sleek glassmorphism panels, cyan #00f5d4 and neon violet #7928ca glowing telemetry lines, financial trading metrics, 3D holographic data graphs, minimal typography, shot on 35mm lens, photorealistic studio lighting, octane render, 8k resolution, clean modern UI --ar 16:9 --v 6.0`
+  },
+  {
+    id: "teacher-lesson-plan",
+    profession: "teachers",
+    professionName: "Teachers",
+    title: "Differentiated High School STEM Lesson Plan",
+    scenario: "Build a 60-minute interactive lesson plan with tiered activities for various learning speeds.",
+    toolRecommended: "Claude / ChatGPT",
+    prompt: `Act as an expert high school curriculum designer. Create a 60-minute lesson plan on [TOPIC, e.g., Photosynthesis and Cellular Energy] for [9th Grade Biology].
+Include:
+1. 5-minute engaging real-world hook / bell-ringer question
+2. 15-minute direct instruction outline with visual analogies
+3. 25-minute collaborative group lab activity
+4. Differentiated tier adjustments:
+   - Support for struggling learners
+   - Extension challenge for advanced students
+5. 5-minute exit ticket with 3 formative assessment questions`
+  },
+  {
+    id: "sales-cold-outreach",
+    profession: "sales",
+    professionName: "Sales",
+    title: "Hyper-Personalized Executive Cold Email",
+    scenario: "Convert cold C-level prospects into discovery calls without sound like spam.",
+    toolRecommended: "Copy.ai / ChatGPT",
+    prompt: `Act as a top 1% Enterprise Account Executive. Write a cold outreach email to [PROSPECT NAME], [TITLE] at [COMPANY].
+Recent company news / trigger event: [e.g., They just raised Series B or expanded into Europe]
+Our value prop: [e.g., We help engineering teams reduce cloud infrastructure bills by 35%]
+Rules:
+- Under 90 words
+- No cheesy pleasantries ("Hope this finds you well")
+- Focus 80% on their business pain, 20% on our solution
+- Frictionless low-commitment Call To Action (e.g., "Open to an informal 3-minute idea exchange?")`
+  },
+  {
+    id: "creator-youtube-hook",
+    profession: "creators",
+    professionName: "Creators",
+    title: "Viral YouTube 30-Second Video Intro Hook",
+    scenario: "Craft a high-retention intro script that prevents viewers from clicking away.",
+    toolRecommended: "ChatGPT / Claude",
+    prompt: `Act as a YouTube retention algorithm expert with 10M+ views experience. Write 3 alternative opening 30-second video hooks for a video titled:
+"[VIDEO TITLE, e.g., I Built an AI Clone of Myself in 48 Hours]"
+Framework:
+- Second 0-5: Immediate visual and audio disruption (No "Hey guys, welcome back!")
+- Second 6-15: Escalate the stakes (What happens if I fail?)
+- Second 16-25: Tease the surprising climax
+- Second 26-30: Bridge directly into the first practical step`
+  },
+  {
+    id: "finance-variance-analysis",
+    profession: "accountants",
+    professionName: "Accountants",
+    title: "Quarterly Budget vs Actual Financial Variance Commentary",
+    scenario: "Translate raw monthly ledger variance numbers into executive board commentary.",
+    toolRecommended: "Claude / ChatGPT",
+    prompt: `Act as a Corporate Financial Controller. Analyze the following budget vs actual financial data for Q2:
+[PASTE TABLE WITH REVENUE, COGS, OPEX, EBITDA]
+Produce:
+1. Executive Summary highlighting the single largest positive and negative variance
+2. Root-cause breakdown explaining WHY the variance occurred (Price vs Volume vs Timing)
+3. Actionable remediation steps for department heads to stay on track for Q3 budget`
+  },
+  {
+    id: "hr-behavioral-questions",
+    profession: "hr",
+    professionName: "HR & Recruiters",
+    title: "Structured STAR Behavioral Interview Matrix",
+    scenario: "Standardize candidate interviews to eliminate bias and grade competency accurately.",
+    toolRecommended: "Claude / ChatGPT",
+    prompt: `I am hiring for the role of [ROLE TITLE, e.g., Senior Product Marketing Manager].
+The core competencies required are: Cross-functional leadership, data-driven analytical decision making, and navigating ambiguity.
+Generate:
+1. 5 in-depth behavioral interview questions using the STAR framework (Situation, Task, Action, Result)
+2. What a 'Poor' (1/5), 'Good' (3/5), and 'Exceptional' (5/5) candidate answer sounds like for each question
+3. Probing follow-up questions to uncover whether the candidate did the work or was just a bystander`
+  },
+  {
+    id: "support-de-escalate",
+    profession: "customer-support",
+    professionName: "Customer Support",
+    title: "Empathetic Customer Dispute De-escalation",
+    scenario: "Turn an angry, churn-risk customer into a brand advocate.",
+    toolRecommended: "Claude / ChatGPT",
+    prompt: `Act as an elite Customer Experience Lead. An angry premium customer just sent this message:
+"[PASTE ANGRY CUSTOMER COMPLAINT]"
+Company policy: [e.g., We can issue a 1-month refund credit and expedite their ticket to Level 3 engineering]
+Draft an empathetic reply that:
+1. Validates their frustration without admitting legal liability
+2. Explains the exact transparent steps being taken right now to resolve their issue
+3. Delivers the compensation credit gracefully without making them jump through hoops`
+  }
+];
+
+function initPromptLibrary() {
+  const bar = document.getElementById("prompts-filter-bar");
+  if (!bar) return;
+
+  const categories = [
+    { id: "all", label: "🌟 All Prompts" },
+    { id: "developers", label: "💻 Developers" },
+    { id: "students", label: "🎓 Students & Academics" },
+    { id: "business", label: "🚀 Founders" },
+    { id: "marketers", label: "📈 Marketers" },
+    { id: "lawyers", label: "⚖️ Lawyers" },
+    { id: "creators", label: "🎬 Creators" },
+    { id: "teachers", label: "📚 Teachers" }
+  ];
+
+  bar.innerHTML = categories.map((cat, i) => `
+    <button class="prompt-filter-pill ${i === 0 ? 'active' : ''}" onclick="filterPrompts('${cat.id}', this)">
+      ${cat.label}
+    </button>
+  `).join("");
+
+  renderPrompts("all");
+}
+
+function filterPrompts(profId, pillEl) {
+  document.querySelectorAll(".prompt-filter-pill").forEach(p => p.classList.remove("active"));
+  if (pillEl) pillEl.classList.add("active");
+  renderPrompts(profId);
+}
+
+function renderPrompts(filter) {
+  const grid = document.getElementById("prompts-grid");
+  if (!grid) return;
+
+  const filtered = filter === "all"
+    ? PROMPT_LIBRARY
+    : PROMPT_LIBRARY.filter(p => p.profession === filter);
+
+  grid.innerHTML = filtered.map(pr => `
+    <article class="prompt-card">
+      <div>
+        <div class="prompt-card-top">
+          <span class="prompt-prof-badge">${pr.professionName}</span>
+          <span class="prompt-tool-tag">Recommended: ${pr.toolRecommended}</span>
+        </div>
+        <h3 class="prompt-title">${pr.title}</h3>
+        <p class="prompt-scenario">${pr.scenario}</p>
+        <div class="prompt-box" id="prompt-text-${pr.id}">${escapeHtml(pr.prompt)}</div>
+      </div>
+      <button class="prompt-copy-btn" onclick="copyPromptText('${pr.id}', this)">
+        <span>📋 Copy Prompt</span>
+      </button>
+    </article>
+  `).join("");
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function copyPromptText(promptId, btn) {
+  const pr = PROMPT_LIBRARY.find(p => p.id === promptId);
+  if (!pr) return;
+
+  navigator.clipboard.writeText(pr.prompt).then(() => {
+    btn.classList.add("copied");
+    btn.innerHTML = "<span>✅ Prompt Copied to Clipboard!</span>";
+    showToast("📋", `"${pr.title}" prompt copied! Paste into ${pr.toolRecommended}.`);
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      btn.innerHTML = "<span>📋 Copy Prompt</span>";
+    }, 2200);
+  }).catch(() => {
+    showToast("📋", "Copied prompt successfully.");
   });
 }
 
-/* ── Render Sections ── */
-function renderGamesSection() {
-  var isFiltering = gameSearch || gameFilter !== "all" || showFavoritesOnly;
-  var sections = ["recently-played-section","featured-section","trending-section","new-section","all-games-section","favorites-section"];
+/* ── 10.9 SMART AI FINDER ("What do you want to do?") ── */
+function initSmartFinder() {
+  const input = document.getElementById("finder-input");
+  if (!input) return;
 
-  if (showFavoritesOnly) {
-    sections.forEach(function(id){ document.getElementById(id).classList.add("hidden"); });
-    document.getElementById("favorites-section").classList.remove("hidden");
-    renderFavoritesGrid();
-    updateGamesLabel();
-    return;
-  }
-  if (isFiltering) {
-    sections.forEach(function(id){ document.getElementById(id).classList.add("hidden"); });
-    document.getElementById("all-games-section").classList.remove("hidden");
-    renderAllGamesGrid();
-    updateGamesLabel();
-    return;
-  }
-  document.getElementById("all-games-section").classList.add("hidden");
-  document.getElementById("favorites-section").classList.add("hidden");
-  renderRecentRow();
-  renderFeaturedRow();
-  renderTrendingGrid();
-  renderNewGrid();
-  updateGamesLabel();
-}
-
-function renderRecentRow() {
-  var recent = getRecentGames();
-  var section = document.getElementById("recently-played-section");
-  var row = document.getElementById("recently-played-row");
-  if (!recent.length) { section.classList.add("hidden"); return; }
-  section.classList.remove("hidden");
-  row.innerHTML = "";
-  var frag = document.createDocumentFragment();
-  recent.forEach(function(id) {
-    var g = BROWSER_GAMES.find(function(x){ return x.id === id; });
-    if (g) frag.appendChild(buildGameCard(g, "compact"));
+  let debounceTimer;
+  input.addEventListener("input", (e) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      runSmartFinder(e.target.value.trim());
+    }, 200);
   });
-  row.appendChild(frag);
 }
 
-function renderFeaturedRow() {
-  var section = document.getElementById("featured-section");
-  var row = document.getElementById("featured-games-row");
-  var list = BROWSER_GAMES.filter(function(g){ return g.isFeatured; });
-  section.classList.remove("hidden");
-  row.innerHTML = "";
-  var frag = document.createDocumentFragment();
-  list.forEach(function(g){ frag.appendChild(buildGameCard(g, "featured")); });
-  row.appendChild(frag);
+function applyFinderChip(taskString) {
+  const input = document.getElementById("finder-input");
+  if (input) {
+    input.value = taskString;
+    runSmartFinder(taskString);
+  }
 }
 
-function renderTrendingGrid() {
-  var section = document.getElementById("trending-section");
-  var grid = document.getElementById("trending-games-grid");
-  var list = BROWSER_GAMES.filter(function(g){ return g.isTrending; });
-  section.classList.remove("hidden");
+function runSmartFinder(query) {
+  const resultsBox = document.getElementById("finder-results-box");
+  const grid = document.getElementById("finder-results-grid");
+  const countEl = document.getElementById("finder-results-count");
+  if (!resultsBox || !grid) return;
+
+  if (!query) {
+    resultsBox.classList.add("hidden");
+    return;
+  }
+
+  const q = query.toLowerCase();
+  const tokens = q.split(/\s+/).filter(w => w.length > 2);
+
+  // Score each tool based on relevance
+  const scored = AI_TOOLS.map(t => {
+    let score = 0;
+    const name = t.name.toLowerCase();
+    const comp = t.company.toLowerCase();
+    const desc = t.description.toLowerCase();
+    const best = (t.bestFor || "").toLowerCase();
+    const cat = (t.category || "").toLowerCase();
+    const tasks = (t.tasks || []).map(k => k.toLowerCase()).join(" ");
+    const profs = (t.professions || []).join(" ");
+    const tags = (t.tags || []).join(" ").toLowerCase();
+
+    tokens.forEach(tok => {
+      if (name.includes(tok)) score += 10;
+      if (best.includes(tok)) score += 6;
+      if (tasks.includes(tok)) score += 5;
+      if (profs.includes(tok)) score += 4;
+      if (tags.includes(tok)) score += 3;
+      if (desc.includes(tok)) score += 2;
+      if (cat.includes(tok)) score += 2;
+      if (comp.includes(tok)) score += 1;
+    });
+
+    return { tool: t, score };
+  }).filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6)
+    .map(item => item.tool);
+
+  if (scored.length === 0) {
+    resultsBox.classList.remove("hidden");
+    countEl.textContent = "0 matches found";
+    grid.innerHTML = `
+      <div class="no-results" style="grid-column: 1 / -1; padding: 2rem 0;">
+        <div class="no-results-icon">🔍</div>
+        <h3>No direct tool match found</h3>
+        <p>Try searching general terms like "coding", "video", "research", or "writing".</p>
+      </div>
+    `;
+    return;
+  }
+
+  resultsBox.classList.remove("hidden");
+  countEl.textContent = `${scored.length} matching AI tools`;
   grid.innerHTML = "";
-  var frag = document.createDocumentFragment();
-  list.forEach(function(g, i) {
-    var card = buildGameCard(g, "normal");
-    card.style.animationDelay = (i * 0.035) + "s";
-    frag.appendChild(card);
-  });
+  const frag = document.createDocumentFragment();
+  scored.forEach((t, i) => frag.appendChild(buildCard(t, i)));
   grid.appendChild(frag);
 }
 
-function renderNewGrid() {
-  var section = document.getElementById("new-section");
-  var grid = document.getElementById("new-games-grid");
-  var list = BROWSER_GAMES.filter(function(g){ return g.isNew; });
-  section.classList.remove("hidden");
-  grid.innerHTML = "";
-  var frag = document.createDocumentFragment();
-  list.forEach(function(g, i) {
-    var card = buildGameCard(g, "normal");
-    card.style.animationDelay = (i * 0.035) + "s";
-    frag.appendChild(card);
-  });
-  grid.appendChild(frag);
-}
-
-function renderAllGamesGrid() {
-  var grid = document.getElementById("all-games-grid");
-  var noRes = document.getElementById("games-no-results");
-  var list = getFilteredGames();
-  grid.innerHTML = "";
-  if (!list.length) {
-    noRes.classList.remove("hidden"); grid.style.display = "none";
-  } else {
-    noRes.classList.add("hidden"); grid.style.display = "";
-    var frag = document.createDocumentFragment();
-    list.forEach(function(g, i) {
-      var card = buildGameCard(g, "normal");
-      card.style.animationDelay = (i * 0.035) + "s";
-      frag.appendChild(card);
-    });
-    grid.appendChild(frag);
-  }
-  var title = document.getElementById("all-games-title");
-  if (gameFilter !== "all") {
-    var catInfo = GAME_CATEGORIES[gameFilter];
-    title.textContent = (catInfo ? catInfo.emoji + " " + catInfo.label : "") + " Games";
-  } else {
-    title.textContent = gameSearch ? 'Search: "' + gameSearch + '"' : "All Games";
-  }
-}
-
-function renderFavoritesGrid() {
-  var grid = document.getElementById("favorites-grid");
-  var noFavs = document.getElementById("games-no-favorites");
-  var favIds = getGameFavorites();
-  var list = BROWSER_GAMES.filter(function(g){ return favIds.indexOf(g.id) >= 0; });
-  grid.innerHTML = "";
-  if (!list.length) {
-    noFavs.classList.remove("hidden"); grid.style.display = "none";
-  } else {
-    noFavs.classList.add("hidden"); grid.style.display = "";
-    var frag = document.createDocumentFragment();
-    list.forEach(function(g, i) {
-      var card = buildGameCard(g, "normal");
-      card.style.animationDelay = (i * 0.035) + "s";
-      frag.appendChild(card);
-    });
-    grid.appendChild(frag);
-  }
-}
-
-function updateGamesLabel() {
-  var lbl = document.getElementById("games-results-label");
-  if (showFavoritesOnly) {
-    var c = getGameFavorites().length;
-    lbl.textContent = c + " favorite game" + (c !== 1 ? "s" : "");
-  } else if (gameSearch || gameFilter !== "all") {
-    var f = getFilteredGames();
-    lbl.textContent = "Showing " + f.length + " of " + BROWSER_GAMES.length + " games";
-  } else {
-    lbl.textContent = BROWSER_GAMES.length + " free games available";
-  }
-  var sc = document.getElementById("games-search-count");
-  sc.textContent = gameSearch ? getFilteredGames().length + " found" : "";
-}
-
-/* ── Favorites ── */
-function toggleFavorite(gameId) {
-  var favs = getGameFavorites();
-  var idx = favs.indexOf(gameId);
-  if (idx >= 0) favs.splice(idx, 1); else favs.push(gameId);
-  saveGameFavorites(favs);
-  renderGamesSection();
-  if (currentPlayingGame && currentPlayingGame.id === gameId) updatePlayerFavBtn();
-}
-function toggleFavoritesView() {
-  showFavoritesOnly = !showFavoritesOnly;
-  var btn = document.getElementById("fav-toggle-btn");
-  var icon = document.getElementById("fav-toggle-icon");
-  if (showFavoritesOnly) {
-    btn.classList.add("fav-toggle-active"); icon.textContent = "\u2764\uFE0F";
-  } else {
-    btn.classList.remove("fav-toggle-active"); icon.textContent = "\u2661";
-  }
-  renderGamesSection();
-}
-function toggleFavoriteFromPlayer() {
-  if (!currentPlayingGame) return;
-  toggleFavorite(currentPlayingGame.id);
-}
-function updatePlayerFavBtn() {
-  if (!currentPlayingGame) return;
-  var isFav = getGameFavorites().indexOf(currentPlayingGame.id) >= 0;
-  document.getElementById("gp-fav-icon").textContent = isFav ? "\u2764\uFE0F" : "\u2661";
-  var btn = document.getElementById("gp-fav-btn");
-  if (isFav) btn.classList.add("fav-active"); else btn.classList.remove("fav-active");
-}
-
-/* ── Game Player ── */
-function openGamePlayer(gameId) {
-  var game = BROWSER_GAMES.find(function(g){ return g.id === gameId; });
-  if (!game) return;
-  currentPlayingGame = game;
-  addRecentGame(gameId);
-
-  document.getElementById("game-player-emoji").textContent = game.emoji;
-  document.getElementById("game-player-title").textContent = game.name;
-  var cat = GAME_CATEGORIES[game.category] || {};
-  document.getElementById("game-player-category").textContent = (cat.emoji || "") + " " + (cat.label || game.category);
-
-  var iframe = document.getElementById("game-iframe");
-  var loading = document.getElementById("game-loading");
-
-  if (game.embedUrl) {
-    iframe.style.display = "";
-    loading.classList.remove("hidden");
-    loading.innerHTML = '<div class="game-loading-spinner"></div><p>Loading game\u2026</p>';
-    iframe.onload = function() { loading.classList.add("hidden"); };
-    iframe.src = game.embedUrl;
-  } else {
-    iframe.style.display = "none"; iframe.src = "";
-    loading.classList.remove("hidden");
-    loading.innerHTML =
-      '<div class="game-no-embed">' +
-        '<span style="font-size:4rem">' + game.emoji + '</span>' +
-        '<h3>' + game.name + '</h3>' +
-        '<p>This game opens on its official website.</p>' +
-        '<a href="' + game.playUrl + '" target="_blank" rel="noopener noreferrer" class="gc-play-btn" style="padding:12px 28px;font-size:1rem;text-decoration:none;display:inline-flex">\u25B6 Play on Site</a>' +
-      '</div>';
-  }
-
-  document.getElementById("game-player-rating").innerHTML = renderInteractiveStars(gameId);
-  updatePlayerFavBtn();
-  document.getElementById("gp-site-link").href = game.playUrl;
-  document.getElementById("game-player-modal").classList.remove("hidden");
-  document.body.style.overflow = "hidden";
-}
-
-function closeGamePlayer() {
-  document.getElementById("game-iframe").src = "";
-  document.getElementById("game-player-modal").classList.add("hidden");
-  document.body.style.overflow = "";
-  currentPlayingGame = null;
-  renderGamesSection();
-}
-
-function toggleGameFullscreen() {
-  var wrap = document.getElementById("game-frame-wrap");
-  if (document.fullscreenElement) { document.exitFullscreen(); }
-  else { wrap.requestFullscreen().catch(function(){}); }
-}
-
-function rateCurrentGame(stars) {
-  if (!currentPlayingGame) return;
-  setGameRating(currentPlayingGame.id, stars);
-  document.getElementById("game-player-rating").innerHTML = renderInteractiveStars(currentPlayingGame.id);
-}
-
-/* Close game player on Escape */
-document.addEventListener("keydown", function(e) {
-  if (e.key === "Escape" && currentPlayingGame) closeGamePlayer();
-});
-
-/* ── Game Search & Filter Bindings ── */
-document.getElementById("games-search-input").addEventListener("input", function(e) {
-  gameSearch = e.target.value.trim();
-  showFavoritesOnly = false;
-  document.getElementById("fav-toggle-btn").classList.remove("fav-toggle-active");
-  document.getElementById("fav-toggle-icon").textContent = "\u2661";
-  renderGamesSection();
-});
-
-document.querySelectorAll("[data-game-filter]").forEach(function(pill) {
-  pill.addEventListener("click", function() {
-    document.querySelectorAll("[data-game-filter]").forEach(function(p) {
-      p.classList.remove("active"); p.setAttribute("aria-selected", "false");
-    });
-    pill.classList.add("active"); pill.setAttribute("aria-selected", "true");
-    gameFilter = pill.dataset.gameFilter;
-    showFavoritesOnly = false;
-    document.getElementById("fav-toggle-btn").classList.remove("fav-toggle-active");
-    document.getElementById("fav-toggle-icon").textContent = "\u2661";
-    renderGamesSection();
-  });
-});
 
 /* ─────────────────────────────────────────────────────
    11. DEVELOPER API & BLOG PREVIEW LOGIC
@@ -2021,19 +3070,19 @@ var API_TEMPLATES = {
     curl: "curl -X GET \"https://api.organai.io/v1/tools\" \\\n  -H \"Authorization: Bearer YOUR_API_KEY\"",
     js: "fetch('https://api.organai.io/v1/tools', {\n  headers: {\n    'Authorization': 'Bearer YOUR_API_KEY'\n  }\n})\n.then(res => res.json())\n.then(data => console.log(data));",
     py: "import requests\n\nurl = 'https://api.organai.io/v1/tools'\nheaders = {'Authorization': 'Bearer YOUR_API_KEY'}\n\nresponse = requests.get(url, headers=headers)\nprint(response.json())",
-    response: "{\n  \"status\": \"success\",\n  \"count\": 40,\n  \"tools\": [\n    {\n      \"id\": \"chatgpt\",\n      \"name\": \"ChatGPT\",\n      \"category\": \"text\",\n      \"pricing\": \"Freemium\",\n      \"rating\": 4.8\n    },\n    {\n      \"id\": \"claude\",\n      \"name\": \"Claude\",\n      \"category\": \"text\",\n      \"pricing\": \"Freemium\",\n      \"rating\": 4.9\n    }\n  ]\n}"
+    response: "{\n  \"status\": \"success\",\n  \"count\": 67,\n  \"tools\": [\n    {\n      \"id\": \"chatgpt\",\n      \"name\": \"ChatGPT\",\n      \"category\": \"text\",\n      \"pricing\": \"Freemium\",\n      \"bestFor\": \"General reasoning & writing\"\n    },\n    {\n      \"id\": \"cursor\",\n      \"name\": \"Cursor\",\n      \"category\": \"code\",\n      \"pricing\": \"Freemium\",\n      \"bestFor\": \"Full-codebase agentic development\"\n    }\n  ]\n}"
   },
-  "games-endpoint": {
-    curl: "curl -X GET \"https://api.organai.io/v1/games\" \\\n  -H \"Authorization: Bearer YOUR_API_KEY\"",
-    js: "fetch('https://api.organai.io/v1/games', {\n  headers: {\n    'Authorization': 'Bearer YOUR_API_KEY'\n  }\n})\n.then(res => res.json())\n.then(data => console.log(data));",
-    py: "import requests\n\nurl = 'https://api.organai.io/v1/games'\nheaders = {'Authorization': 'Bearer YOUR_API_KEY'}\n\nresponse = requests.get(url, headers=headers)\nprint(response.json())",
-    response: "{\n  \"status\": \"success\",\n  \"count\": 44,\n  \"games\": [\n    {\n      \"id\": \"pacman\",\n      \"name\": \"Pac-Man\",\n      \"category\": \"arcade\",\n      \"rating\": 4.7,\n      \"featured\": true\n    },\n    {\n      \"id\": \"krunker\",\n      \"name\": \"Krunker.io\",\n      \"category\": \"action\",\n      \"rating\": 4.5,\n      \"featured\": true\n    }\n  ]\n}"
+  "professions-endpoint": {
+    curl: "curl -X GET \"https://api.organai.io/v1/professions\" \\\n  -H \"Authorization: Bearer YOUR_API_KEY\"",
+    js: "fetch('https://api.organai.io/v1/professions', {\n  headers: {\n    'Authorization': 'Bearer YOUR_API_KEY'\n  }\n})\n.then(res => res.json())\n.then(data => console.log(data));",
+    py: "import requests\n\nurl = 'https://api.organai.io/v1/professions'\nheaders = {'Authorization': 'Bearer YOUR_API_KEY'}\n\nresponse = requests.get(url, headers=headers)\nprint(response.json())",
+    response: "{\n  \"status\": \"success\",\n  \"count\": 20,\n  \"professions\": [\n    {\n      \"id\": \"developers\",\n      \"name\": \"Developers & Engineers\",\n      \"recommendedTools\": [\"cursor\", \"github-copilot\", \"v0\", \"bolt\"],\n      \"popularTasks\": 4\n    },\n    {\n      \"id\": \"designers\",\n      \"name\": \"UI/UX & Graphic Designers\",\n      \"recommendedTools\": [\"midjourney\", \"flux\", \"canva-ai\", \"recraft\"],\n      \"popularTasks\": 4\n    }\n  ]\n}"
   },
-  "rate-endpoint": {
-    curl: "curl -X POST \"https://api.organai.io/v1/rate\" \\\n  -H \"Authorization: Bearer YOUR_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"gameId\": \"pacman\", \"rating\": 5}'",
-    js: "fetch('https://api.organai.io/v1/rate', {\n  method: 'POST',\n  headers: {\n    'Authorization': 'Bearer YOUR_API_KEY',\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({\n    gameId: 'pacman',\n    rating: 5\n  })\n})\n.then(res => res.json())\n.then(data => console.log(data));",
-    py: "import requests\n\nurl = 'https://api.organai.io/v1/rate'\nheaders = {\n    'Authorization': 'Bearer YOUR_API_KEY',\n    'Content-Type': 'application/json'\n}\ndata = {\n    'gameId': 'pacman',\n    'rating': 5\n}\n\nresponse = requests.post(url, headers=headers, json=data)\nprint(response.json())",
-    response: "{\n  \"status\": \"success\",\n  \"message\": \"Rating submitted successfully!\",\n  \"data\": {\n    \"gameId\": \"pacman\",\n    \"userRating\": 5,\n    \"newAverage\": 4.75\n  }\n}"
+  "workflows-endpoint": {
+    curl: "curl -X GET \"https://api.organai.io/v1/workflows\" \\\n  -H \"Authorization: Bearer YOUR_API_KEY\"",
+    js: "fetch('https://api.organai.io/v1/workflows', {\n  headers: {\n    'Authorization': 'Bearer YOUR_API_KEY'\n  }\n})\n.then(res => res.json())\n.then(data => console.log(data));",
+    py: "import requests\n\nurl = 'https://api.organai.io/v1/workflows'\nheaders = {'Authorization': 'Bearer YOUR_API_KEY'}\n\nresponse = requests.get(url, headers=headers)\nprint(response.json())",
+    response: "{\n  \"status\": \"success\",\n  \"count\": 7,\n  \"workflows\": [\n    {\n      \"id\": \"youtube-creation\",\n      \"title\": \"End-to-End YouTube Production\",\n      \"toolChain\": [\"chatgpt\", \"midjourney\", \"elevenlabs\", \"runway\", \"descript\"],\n      \"timeSaved\": \"85% faster creation\"\n    }\n  ]\n}"
   }
 };
 
@@ -2084,26 +3133,29 @@ var BLOG_POSTS = {
           "<h4>2. Ambient Glow &amp; Cursor Lighting</h4>" +
           "<p>To avoid flat containers, we drop a radial-gradient light layer behind the container that moves in real time with the mouse. By setting <code>pointer-events: none</code>, this visual highlight floats smoothly under the container text without interfering with clicks.</p>" +
           "<h4>3. 3D Perspective and Tilt</h4>" +
-          "<p>By applying <code>transform-style: preserve-3d</code> to the card, and translating child elements (like game badges or emojis) along the Z-axis (<code>transform: translateZ(30px)</code>), we create a parallax effect. When the mouse moves, the card rotates along the X and Y axes, making the inner elements pop off the screen.</p>" +
+          "<p>By applying <code>transform-style: preserve-3d</code> to the card, and translating child elements along the Z-axis, we create a parallax effect. When the mouse moves, the card rotates along the X and Y axes, making the inner elements pop off the screen.</p>" +
           "<p>Applying these micro-interactions increases click-through rates by up to 40% because users feel a sense of play and control just by hovering over the page.</p>"
   },
-  "html5-gaming": {
-    title: "HTML5 Game Development in 2026: Canvas vs WebGL",
-    tag: "Game Dev",
-    tagClass: "tag-gaming",
+  "ai-workflows": {
+    title: "Mastering AI Workflows: Multi-Tool Pipelines in 2026",
+    tag: "AI Workflows",
+    tagClass: "tag-tech",
     time: "6 min read",
     author: "Leo Martinez",
     avatar: "👨‍🚀",
     date: "June 21, 2026",
-    body: "<p>Browser-playable games are experiencing a massive renaissance. With the decline of native app store installs, developers are returning to the web to offer instant, frictionless access. But when building high-performance browser games in 2026, developers face a core architectural choice: Canvas API or WebGL/WebGPU?</p>" +
-          "<h4>WebGL: The 3D and Particle Powerhouse</h4>" +
-          "<p>If your game involves millions of dynamic particles, complex lighting shaders, or full 3D models (like <em>Krunker.io</em> or <em>Shell Shockers</em>), WebGL is mandatory. It runs directly on the GPU, yielding extremely high frame rates (60-120 FPS) and low cpu cycles. The drawbacks are larger bundle sizes (due to importing math matrices or engine files) and stricter device capability rules.</p>" +
-          "<h4>Canvas API: Lightweight and Retro-Friendly</h4>" +
-          "<p>For 2D classics, block puzzles, or retro physics (like <em>Pac-Man</em>, <em>2048</em>, or <em>Snake</em>), the Canvas 2D Context remains the king. It requires zero engine downloads, has a flat learning curve, and is supported by 100% of mobile and desktop browsers. It compiles rapidly, loading your game in milliseconds.</p>" +
-          "<h4>Embedding and Sandbox Security</h4>" +
-          "<p>When hosting these games on aggregators like ORGAN AI, security is a major hurdle. To protect our users, we run all embeds inside sandboxed iframes:</p>" +
-          "<pre><code>sandbox=\"allow-scripts allow-same-origin allow-popups\"</code></pre>" +
-          "<p>This prevents embedded scripts from accessing parent cookies, blocking pop-up redirections, and securing a safe, seamless gaming loop for our audience.</p>"
+    body: "<p>In 2023, the industry focused on single-model prompt engineering. In 2026, real productivity belongs to professionals who orchestrate <strong>Multi-Tool AI Pipelines</strong>. No single model excels simultaneously at codebase reasoning, photorealistic diffusion, voice synthesis, and video interpolation.</p>" +
+          "<h4>The Power of Stacking Specialized Models</h4>" +
+          "<p>Consider end-to-end video creation. Using a monolithic model often produces generic scripts and low-fidelity audio. By contrast, a chained workflow yields studio-grade output:</p>" +
+          "<ul>" +
+          "<li><strong>Step 1</strong>: ChatGPT or Claude generates narrative scripts with structured pacing hooks.</li>" +
+          "<li><strong>Step 2</strong>: Midjourney generates ultra-high-resolution cover graphics and visual storyboards.</li>" +
+          "<li><strong>Step 3</strong>: ElevenLabs produces emotionally expressive, human-quality voiceovers.</li>" +
+          "<li><strong>Step 4</strong>: Kling AI or Runway animates visual frames with realistic physics and cinematic camera pans.</li>" +
+          "<li><strong>Step 5</strong>: Descript synchronizes transcripts, strips filler words, and burns dynamic captions.</li>" +
+          "</ul>" +
+          "<h4>Why Role-Specific Stacks Win</h4>" +
+          "<p>Across software engineering, finance, legal review, and marketing, professionals who connect domain-tailored models achieve up to 10× output acceleration without sacrificing quality.</p>"
   }
 };
 
@@ -2129,8 +3181,18 @@ function openBlogPost(postId) {
    ───────────────────────────────────────────────────── */
 document.getElementById("footer-year").textContent      = new Date().getFullYear();
 document.getElementById("hero-tool-count").textContent  = AI_TOOLS.length;
+
+// Initialize All AI Discovery Hub Systems
+initBookmarks();
+initToolEnrichments();
 render();
-renderGamesSection();
+renderToolOfDay();
+initSmartFinder();
+initProfessionRecommender();
+renderProfessionsGrid();
+renderWorkflows();
+initCompare();
+initPromptLibrary();
 updateApiCode();
 
 
