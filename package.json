@@ -1,0 +1,18 @@
+{
+  "name": "organ-ai",
+  "version": "2.0.0",
+  "description": "ORGAN AI – The Ultimate AI Tools Universe",
+  "main": "index.html",
+  "scripts": {
+    "dev": "node -e \"const http = require('http'); const fs = require('fs'); const path = require('path'); const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml' }; http.createServer((req, res) => { let p = path.join('.', req.url === '/' ? 'index.html' : req.url.split('?')[0]); if (fs.existsSync(p) && fs.statSync(p).isFile()) { res.writeHead(200, { 'Content-Type': MIME[path.extname(p)] || 'text/plain' }); fs.createReadStream(p).pipe(res); } else { res.writeHead(404); res.end('Not Found'); } }).listen(8181, () => console.log('Server running on http://localhost:8181'));\""
+  },
+  "dependencies": {
+    "@designcodeio/threeui": "file:./node_modules/@designcodeio/threeui",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/three": "^0.160.0",
+    "typescript": "^5.3.0"
+  }
+}

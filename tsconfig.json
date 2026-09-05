@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@designcodeio/threeui": ["./node_modules/@designcodeio/threeui"],
+      "@designcodeio/threeui/*": ["./node_modules/@designcodeio/threeui/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

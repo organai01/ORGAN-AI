@@ -3195,4 +3195,29 @@ initCompare();
 initPromptLibrary();
 updateApiCode();
 
+// Relay pointermove and resize to shader-frame background for interactive pointer drift
+window.addEventListener('pointermove', function(e) {
+  var iframe = document.querySelector('.shader-frame iframe');
+  if (iframe && iframe.contentWindow) {
+    try {
+      var evt = new PointerEvent('pointermove', {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        bubbles: true
+      });
+      iframe.contentWindow.dispatchEvent(evt);
+    } catch (_) {}
+  }
+}, { passive: true });
+
+window.addEventListener('resize', function() {
+  var iframe = document.querySelector('.shader-frame iframe');
+  if (iframe && iframe.contentWindow) {
+    try {
+      iframe.contentWindow.dispatchEvent(new Event('resize'));
+    } catch (_) {}
+  }
+}, { passive: true });
+
+
 
